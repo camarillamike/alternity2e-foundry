@@ -2,7 +2,15 @@
 
 > Private campaign repository. This package includes material derived from a lawfully owned rulebook and is not licensed for public redistribution.
 
-Version 0.2.3 turns the prototype into a playable Foundry workflow:
+Version 0.3.0 replaces the prototype impulse counter with a rulebook action scheduler:
+
+- Absolute impulse timing preserves actions across round boundaries (for example, Impulse 7 plus a 3-impulse action becomes next round, Impulse 2).
+- Initiative success levels schedule first actions correctly; failures begin in Impulse 2.
+- First-action priority and later first-in/first-out sequencing are retained.
+- Standard action costs, readying, reactions, weapon Speed, reloads, total defense, dazed/slowed/stun delays, and common modifiers are integrated into the Actor sheet and Combat Tracker.
+- End-of-round and start-of-round reminders cover passive resistance, timed effects, and damage over time.
+
+The broader Foundry workflow also includes:
 
 - Full hero sheet with Play, Character, Items, Advancement, and Notes views.
 - Desktop Hero Forge JSON import/export.

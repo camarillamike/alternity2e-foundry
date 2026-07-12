@@ -1,5 +1,6 @@
 import { archetypes, species, talents, catalogDocuments, refreshActorSources, refreshCompendiums } from "./catalogs.mjs";
 import { AlternityCreationWizard } from "./wizard.mjs";
+import { positionFromTick } from "./impulse-rules.mjs";
 
 const { ActorSheetV2, ItemSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -14,7 +15,8 @@ export class AlternityActorSheet extends HandlebarsApplicationMixin(ActorSheetV2
       importCharacter: AlternityActorSheet.#importCharacter, adjustAbility: AlternityActorSheet.#adjustAbility, adjustRank: AlternityActorSheet.#adjustRank,
       toggleEquip: AlternityActorSheet.#toggleEquip, editItem: AlternityActorSheet.#editItem, deleteItem: AlternityActorSheet.#deleteItem,
       reload: AlternityActorSheet.#reload, recover: AlternityActorSheet.#recover, newScene: AlternityActorSheet.#newScene, advanceLevel: AlternityActorSheet.#advanceLevel,
-      refreshSources: AlternityActorSheet.#refreshSources, rebuildCompendiums: AlternityActorSheet.#rebuildCompendiums, creationWizard: AlternityActorSheet.#creationWizard
+      refreshSources: AlternityActorSheet.#refreshSources, rebuildCompendiums: AlternityActorSheet.#rebuildCompendiums, creationWizard: AlternityActorSheet.#creationWizard,
+      scheduleAction: AlternityActorSheet.#scheduleAction, setCombatModifier: AlternityActorSheet.#setCombatModifier, react: AlternityActorSheet.#react
     }
   };
   static PARTS = { main: { template: "systems/alternity2e/templates/actor-sheet.hbs" } };
@@ -25,8 +27,10 @@ export class AlternityActorSheet extends HandlebarsApplicationMixin(ActorSheetV2
     if (!s.derived?.durability) throw new Error(`Alternity 2e could not prepare derived statistics for ${actor.name}. Check the console for the earlier prepareDerivedData error.`);
     const skillItems = actor.items.filter(i => i.type === "skill").sort((a, b) => a.system.category.localeCompare(b.system.category) || a.name.localeCompare(b.name));
     const archetype = archetypes.find(row => row.id === s.archetypeId);
+    const combat = game.combat?.started ? game.combat : null, combatant = combat?.combatantForActor?.(actor), nextPosition = combatant ? positionFromTick(Number(combatant.getFlag("alternity2e", "nextTick") || 1)) : null;
     return foundry.utils.mergeObject(context, {
       actor, system: s, editable: this.isEditable, isGM: game.user.isGM, rankCap: Math.min(4 + s.level, 10), speciesOptions: species, archetypeOptions: archetypes,
+      combatState: combatant ? { active: true, ready: combat.isReady(combatant), readied: Boolean(combatant.getFlag("alternity2e", "readied")), nextRound: nextPosition.round, nextImpulse: nextPosition.impulse, lastAction: combatant.getFlag("alternity2e", "lastAction") || "None", modifier: combatant.getFlag("alternity2e", "pendingModifier") } : { active: false },
       mandatedOptions: talents.filter(row => row.entry && (archetype?.id === "freeform" || archetype?.mandatedTalents.includes(row.id))),
       abilities: Object.entries(s.abilities).map(([id, value]) => ({ id, label: game.i18n.localize(`A2E.Ability.${id}`), value })),
       wounds: [["mortal", "16+", "Mortal wound (cannot act)"], ["critical", "13–15", "Critical wound (–3 die steps)"], ["serious", "10–12", "Serious wound (–2 die steps)"], ["moderate", "7–9", "Moderate wound (–1 die step)"], ["light", "4–6", "Light wound (no effect)"], ["graze", "1–3", "Graze (no effect)"]].map(([id, range, label]) => ({ id, range, label, current: s.wounds[id], boxes: Array.from({ length: s.derived.durability[id] }, (_, index) => ({ index, marked: index < s.wounds[id] })) })),
@@ -36,20 +40,23 @@ export class AlternityActorSheet extends HandlebarsApplicationMixin(ActorSheetV2
       statuses: Object.entries({ blinded: "Blinded", dazed: "Dazed", distracted: "Distracted", grappled: "Grappled", impaired: "Impaired", prone: "Prone", slowed: "Slowed", weakened: "Weakened", incapacitated: "Incapacitated", insane: "Insane", "off-balance": "Off-Balance", stun: "Stunned", "damage-over-time": "Damage Over Time" }).map(([id, label]) => ({ id, label, active: s.play.statuses.includes(id) }))
     }, { inplace: false });
   }
-  static async #rollSkill(event, target) { await this.actor.rollSkill(this.actor.items.get(target.dataset.itemId)); }
+  static async #rollSkill(event, target) { const combat = game.combat?.started ? game.combat : null, combatant = combat?.combatantForActor?.(this.actor); if (combat && !combat.isReady(combatant)) return ui.notifications.warn(`${this.actor.name} is not ready to act in this impulse.`); const modifier = combat?.getModifier?.(this.actor, "skill"); await this.actor.rollSkill(this.actor.items.get(target.dataset.itemId), { steps: Number(modifier?.steps || 0) }); if (combat) await this.actor.scheduleCombatAction(3, { label: modifier?.label || "Use a skill or tool", kind: "skill" }); }
   static async #rollWeapon(event, target) { await this.actor.rollWeapon(this.actor.items.get(target.dataset.itemId)); }
   static async #applyDamage() { const form = this.element.querySelector(".damage-form"); await this.actor.applyDamage(Number(form.querySelector("[name=damage]").value), form.querySelector("[name=damageType]").value); }
   static async #heroUp() { await this.actor.update({ "system.heroPoints": this.actor.system.heroPoints + 1 }); }
   static async #heroDown() { await this.actor.spendHeroPoint(); }
   static async #nextImpulse() { if (game.combat?.started && game.combat.advanceImpulse) await game.combat.advanceImpulse(); else { let impulse = this.actor.system.play.impulse + 1, round = this.actor.system.play.round; if (impulse > 8) { impulse = 1; round++; } await this.actor.update({ "system.play.impulse": impulse, "system.play.round": round }); } }
   static async #toggleWound(event, target) { const row = target.dataset.row, index = Number(target.dataset.index), current = this.actor.system.wounds[row]; await this.actor.update({ [`system.wounds.${row}`]: current === index + 1 ? index : index + 1 }); }
-  static async #toggleStatus(event, target) { const id = target.dataset.status, values = [...this.actor.system.play.statuses], next = values.includes(id) ? values.filter(x => x !== id) : [...values, id]; await this.actor.update({ "system.play.statuses": next }); }
+  static async #toggleStatus(event, target) { const id = target.dataset.status, values = [...this.actor.system.play.statuses], adding = !values.includes(id), next = adding ? [...values, id] : values.filter(x => x !== id); await this.actor.update({ "system.play.statuses": next }); if (adding && id === "stun" && game.combat?.started) { const combatant = game.combat.combatantForActor?.(this.actor); if (combatant) await game.combat.delayNextAction(combatant, 3, "Stun"); } }
   static async #adjustAbility(event, target) { const id = target.dataset.ability, value = Math.clamp(this.actor.system.abilities[id] + Number(target.dataset.delta), 0, 10); await this.actor.update({ [`system.abilities.${id}`]: value }); }
   static async #adjustRank(event, target) { const item = this.actor.items.get(target.dataset.itemId), cap = Math.min(4 + this.actor.system.level, 10); await item.update({ "system.ranks": Math.clamp(item.system.ranks + Number(target.dataset.delta), 0, cap) }); }
   static async #toggleEquip(event, target) { const item = this.actor.items.get(target.dataset.itemId); await item.update({ "system.equipped": !item.system.equipped }); }
   static async #editItem(event, target) { this.actor.items.get(target.dataset.itemId)?.sheet.render(true); }
   static async #deleteItem(event, target) { await this.actor.deleteEmbeddedDocuments("Item", [target.dataset.itemId]); }
-  static async #reload(event, target) { const item = this.actor.items.get(target.dataset.itemId); await item.update({ "system.ammo.value": item.system.ammo.max }); await this.actor.scheduleCombatAction(Number(target.dataset.speed || 1)); }
+  static async #reload(event, target) { const item = this.actor.items.get(target.dataset.itemId), combat = game.combat?.started ? game.combat : null; if (combat) { const result = await this.actor.scheduleCombatAction(1, { label: `Reload ${item.name}`, kind: "interact" }); if (!result) return; } await item.update({ "system.ammo.value": item.system.ammo.max }); }
+  static async #scheduleAction(event, target) { const combat = game.combat, combatant = combat?.combatantForActor?.(this.actor); if (!combat?.started || !combatant) return ui.notifications.warn("Add this Actor to an active encounter first."); const kind = target.dataset.kind, cost = Number(target.dataset.cost || 1), label = target.dataset.label || target.textContent.trim(); if (kind === "ready") await combat.readyAction(combatant); else await combat.schedule(combatant, cost, { label, kind }); }
+  static async #setCombatModifier(event, target) { const combat = game.combat, combatant = combat?.combatantForActor?.(this.actor); if (!combat?.started || !combatant) return ui.notifications.warn("Add this Actor to an active encounter first."); const definitions = { aim: { id: "aim", label: "Aim", kind: "attack", steps: 1, delay: 1 }, burst: { id: "burst", label: "Autofire burst", kind: "attack", delay: 1, ammoCost: 3, extraWounds: 1 }, fullauto: { id: "fullauto", label: "Full auto", kind: "attack", delay: 2, ammoCost: 10 }, charge: { id: "charge", label: "Charge", kind: "attack", delay: 1 }, evade: { id: "evade", label: "Evade", delay: 1, defensePenalty: -1 }, concentrate1: { id: "concentrate1", label: "Concentrate +1", kind: "skill", steps: 1, delay: 1 }, concentrate2: { id: "concentrate2", label: "Concentrate +2", kind: "skill", steps: 2, delay: 3 } }; const modifier = definitions[target.dataset.modifier]; if (modifier) await combat.setModifier(combatant, modifier); }
+  static async #react() { const combat = game.combat, combatant = combat?.combatantForActor?.(this.actor); if (!combat?.started || !combatant) return ui.notifications.warn("Add this Actor to an active encounter first."); await combat.delayNextAction(combatant, 1, "Reaction"); }
   static async #recover(event, target) { await this.actor.recover(target.dataset.period); }
   static async #newScene() { await this.actor.recover("scene"); await this.actor.update({ "system.play.round": 1, "system.play.impulse": 1, "system.play.statuses": [] }); }
   static async #advanceLevel() { await this.actor.advanceLevel(); }
