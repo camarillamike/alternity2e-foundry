@@ -10,14 +10,14 @@ export class AlternityActor extends Actor {
     const effectiveVitality = s.abilities.vitality + this.ruleEffects.filter(effect => effect.type === "ability" && effect.ability === "vitality" || effect.type === "effectiveVitality" && effect.purpose === "durability").reduce((sum, effect) => sum + Number(effect.value || 0), 0);
     s.derived = {
       durability: durability(effectiveVitality, talentBoxes), woundPenalty: woundPenalty(s.wounds), incapacitated: s.wounds.mortal > 0 || s.play.statuses.includes("incapacitated"),
-      initiative: { target: 20 - s.abilities.agility - s.abilities.focus, steps: this.#effects("initiativeStep") },
+      initiative: { target: 20 - s.abilities.agility - s.abilities.focus, steps: this._effectTotal("initiativeStep") },
       armor: this.armorResistance, speed: this.currentSpeed, mass: items.reduce((n, i) => n + Number(i.system.mass || 0) * Number(i.system.quantity || 1), 0)
     };
   }
   get ruleEffects() { return [...(species.find(row => row.id === this.system.speciesId)?.effects || []), ...(archetypes.find(row => row.id === this.system.archetypeId)?.effects || []), ...Array.from(this.items).flatMap(item => item.system.effects || [])]; }
-  #effects(type) { return this.ruleEffects.filter(effect => effect.type === type).reduce((sum, effect) => sum + Number(effect.value || 0), 0); }
+  _effectTotal(type) { return this.ruleEffects.filter(effect => effect.type === type).reduce((sum, effect) => sum + Number(effect.value || 0), 0); }
   get armorResistance() { const armor = this.items.filter(i => i.type === "armor" && i.system.equipped), natural = this.ruleEffects.filter(e => e.type === "armor"); return { physical: armor.reduce((n, i) => n + Number(i.system.physical || 0), 0) + natural.reduce((n, e) => n + Number(e.physical || 0), 0), energy: armor.reduce((n, i) => n + Number(i.system.energy || 0), 0) + natural.reduce((n, e) => n + Number(e.energy || 0), 0) }; }
-  get currentSpeed() { const statuses = this.system.play.statuses; if (this.system.wounds.mortal || statuses.includes("incapacitated")) return 0; if (statuses.includes("prone")) return 2; const base = Number(this.ruleEffects.filter(e => e.type === "baseSpeedOverride").at(-1)?.value ?? 20) + this.#effects("speed"); return statuses.some(x => ["blinded", "impaired", "slowed"].includes(x)) ? Math.max(2, base / 2) : base; }
+  get currentSpeed() { const statuses = this.system.play.statuses; if (this.system.wounds.mortal || statuses.includes("incapacitated")) return 0; if (statuses.includes("prone")) return 2; const base = Number(this.ruleEffects.filter(e => e.type === "baseSpeedOverride").at(-1)?.value ?? 20) + this._effectTotal("speed"); return statuses.some(x => ["blinded", "impaired", "slowed"].includes(x)) ? Math.max(2, base / 2) : base; }
   get statusSteps() { const statuses = this.system.play.statuses; return statuses.includes("impaired") ? -2 : statuses.includes("weakened") || statuses.includes("grappled") ? -1 : 0; }
   getSkill(id) { return this.items.find(i => i.type === "skill" && i.system.sourceId === id); }
   async rollSkill(itemOrId, { steps = 0, label } = {}) {
@@ -38,7 +38,7 @@ export class AlternityActor extends Actor {
     const check = await this.rollSkill(skillId, { label: item.name, steps: situational + item.system.effects.filter(e => e.type === "attackSteps").reduce((n, e) => n + Number(e.value || 0), 0) });
     if (check.degree === "Failure") return check;
     const parsed = parseDamage(item.system.damage); if (!parsed) return check;
-    const bonus = (check.degree === "Average" ? parsed.averageBonus : parsed.excellentBonus) + this.#effects("damage"), formula = `${parsed.dice}${bonus >= 0 ? "+" : ""}${bonus}`, damage = await new Roll(formula).evaluate(), hits = check.degree === "Stellar" ? 2 : 1;
+    const bonus = (check.degree === "Average" ? parsed.averageBonus : parsed.excellentBonus) + this._effectTotal("damage"), formula = `${parsed.dice}${bonus >= 0 ? "+" : ""}${bonus}`, damage = await new Roll(formula).evaluate(), hits = check.degree === "Stellar" ? 2 : 1;
     if (item.system.ammo.max > 0) await item.update({ "system.ammo.value": Math.max(0, item.system.ammo.value - 1) });
     const ap = Number(item.system.special.find(value => /^AP\s+\d+/i.test(value))?.match(/\d+/)?.[0] || 0);
     await damage.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this }), flavor: `<strong>${item.name} Damage</strong><br>${check.degree} hit · ${item.system.damageType}${hits === 2 ? " · one additional wound" : ""}<br><button data-alternity-damage="${damage.total}" data-damage-type="${item.system.damageType}" data-wound-hits="${hits}" data-armor-penetration="${ap}">Apply ${damage.total} Damage to Target</button>` });
