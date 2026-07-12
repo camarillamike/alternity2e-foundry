@@ -5,7 +5,7 @@ import { archetypes } from "../data/archetypes.js";
 import { talents } from "../data/talents.js";
 import { gear, upgrades } from "../data/gear.js";
 
-const VERSION = "0.2.1";
+const VERSION = "0.2.2";
 const html = value => String(value || "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 const base = (row, type) => ({ name: row.name, type, system: { sourceId: row.id, description: html(row.description || row.notes || ""), page: row.page || 0, metadata: row } });
 const conditions = [

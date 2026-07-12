@@ -21,6 +21,8 @@ export class AlternityActorSheet extends HandlebarsApplicationMixin(ActorSheetV2
   tabGroups = { primary: "play" };
   async _prepareContext(options) {
     const context = await super._prepareContext(options), actor = this.actor, s = actor.system;
+    if (!s.derived?.durability) actor.prepareDerivedData();
+    if (!s.derived?.durability) throw new Error(`Alternity 2e could not prepare derived statistics for ${actor.name}. Check the console for the earlier prepareDerivedData error.`);
     const skillItems = actor.items.filter(i => i.type === "skill").sort((a, b) => a.system.category.localeCompare(b.system.category) || a.name.localeCompare(b.name));
     const archetype = archetypes.find(row => row.id === s.archetypeId);
     return foundry.utils.mergeObject(context, {

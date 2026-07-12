@@ -2,7 +2,7 @@
 
 > Private campaign repository. This package includes material derived from a lawfully owned rulebook and is not licensed for public redistribution.
 
-Version 0.2.1 turns the prototype into a playable Foundry workflow:
+Version 0.2.2 turns the prototype into a playable Foundry workflow:
 
 - Full hero sheet with Play, Character, Items, Advancement, and Notes views.
 - Desktop Hero Forge JSON import/export.

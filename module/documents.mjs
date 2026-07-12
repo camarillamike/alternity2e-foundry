@@ -14,7 +14,7 @@ export class AlternityActor extends Actor {
       armor: this.armorResistance, speed: this.currentSpeed, mass: items.reduce((n, i) => n + Number(i.system.mass || 0) * Number(i.system.quantity || 1), 0)
     };
   }
-  get ruleEffects() { return [...(species.find(row => row.id === this.system.speciesId)?.effects || []), ...(archetypes.find(row => row.id === this.system.archetypeId)?.effects || []), ...this.items.flatMap(item => item.system.effects || [])]; }
+  get ruleEffects() { return [...(species.find(row => row.id === this.system.speciesId)?.effects || []), ...(archetypes.find(row => row.id === this.system.archetypeId)?.effects || []), ...Array.from(this.items).flatMap(item => item.system.effects || [])]; }
   #effects(type) { return this.ruleEffects.filter(effect => effect.type === type).reduce((sum, effect) => sum + Number(effect.value || 0), 0); }
   get armorResistance() { const armor = this.items.filter(i => i.type === "armor" && i.system.equipped), natural = this.ruleEffects.filter(e => e.type === "armor"); return { physical: armor.reduce((n, i) => n + Number(i.system.physical || 0), 0) + natural.reduce((n, e) => n + Number(e.physical || 0), 0), energy: armor.reduce((n, i) => n + Number(i.system.energy || 0), 0) + natural.reduce((n, e) => n + Number(e.energy || 0), 0) }; }
   get currentSpeed() { const statuses = this.system.play.statuses; if (this.system.wounds.mortal || statuses.includes("incapacitated")) return 0; if (statuses.includes("prone")) return 2; const base = Number(this.ruleEffects.filter(e => e.type === "baseSpeedOverride").at(-1)?.value ?? 20) + this.#effects("speed"); return statuses.some(x => ["blinded", "impaired", "slowed"].includes(x)) ? Math.max(2, base / 2) : base; }
