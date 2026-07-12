@@ -1,0 +1,26 @@
+<form class="{{cssClass}} a2e-sheet" autocomplete="off">
+  <header class="a2e-header">
+    <img src="{{actor.img}}" data-edit="img" title="{{actor.name}}">
+    <div><input class="a2e-name" name="name" value="{{actor.name}}"><p>Level <input type="number" name="system.level" value="{{system.level}}"> · {{actor.type}} · TE <input type="number" name="system.campaign.techEra" value="{{system.campaign.techEra}}"></p></div>
+    <button type="button" data-action="exportCharacter"><i class="fas fa-file-export"></i> Export</button>
+  </header>
+
+  <section class="a2e-summary">
+    <div><strong>{{system.derived.initiative.target}}</strong>Initiative</div><div><strong>{{system.derived.speed}} m</strong>Speed</div><div><strong>{{system.derived.woundPenalty}}</strong>Wound steps</div><div><strong>{{system.derived.armor.physical}} / {{system.derived.armor.energy}}</strong>Armor P/E</div>
+  </section>
+
+  <nav class="tabs" data-group="primary"><a data-tab="play">Play</a><a data-tab="build">Character</a><a data-tab="items">Items</a><a data-tab="notes">Notes</a></nav>
+  <section class="tab" data-group="primary" data-tab="play">
+    <div class="a2e-grid">
+      <article class="panel"><h2>Round {{system.play.round}} · Impulse {{system.play.impulse}}/8</h2><button type="button" data-action="nextImpulse">Advance impulse</button><h3>Hero Points</h3><div class="counter"><button type="button" data-action="heroDown">−</button><strong>{{system.heroPoints}}</strong><button type="button" data-action="heroUp">+</button></div></article>
+      <article class="panel"><h2>Apply Damage</h2><div class="damage-form"><input name="damage" type="number" min="0" value="0"><select name="damageType"><option value="physical">Physical</option><option value="energy">Energy</option><option value="other">Other</option></select><button type="button" data-action="applyDamage">Apply</button></div>{{#if system.play.lastDamage}}<p>{{system.play.lastDamage.raw}} - {{system.play.lastDamage.resistance}} armor = <strong>{{system.play.lastDamage.final}} {{system.play.lastDamage.severity}}</strong></p>{{/if}}</article>
+      <article class="panel wounds"><h2>Armor and Damage</h2>{{#each wounds}}<div class="wound-row"><b>{{range}}</b><span>{{label}}</span><span>{{#each boxes}}<button type="button" class="wound-box {{#if marked}}marked{{/if}}" data-action="toggleWound" data-row="{{../id}}" data-index="{{index}}"></button>{{/each}}</span></div>{{/each}}</article>
+      <article class="panel"><h2>Attacks</h2>{{#each attacks}}<button type="button" class="item-roll" data-action="rollWeapon" data-item-id="{{id}}"><span><b>{{name}}</b><small>{{system.range}} · {{system.speed}} impulses</small></span><span>{{system.damage}} {{system.damageType}}</span></button>{{else}}<p>No equipped weapons.</p>{{/each}}</article>
+      <article class="panel"><h2>Skills</h2>{{#each skills}}<button type="button" class="item-roll" data-action="rollSkill" data-item-id="{{item.id}}"><span><b>{{item.name}}</b><small>{{item.system.keyAbility}} · {{item.system.ranks}} ranks</small></span><span>{{target}} / {{steps}} steps</span></button>{{/each}}</article>
+      <article class="panel"><h2>Conditions</h2><div class="status-grid">{{#each statuses}}<button type="button" class="status {{#if active}}active{{/if}}" data-action="toggleStatus" data-status="{{id}}">{{label}}</button>{{/each}}</div></article>
+    </div>
+  </section>
+  <section class="tab" data-group="primary" data-tab="build"><div class="a2e-grid"><article class="panel"><h2>Abilities</h2>{{#each abilities}}<label class="form-row"><span>{{label}}</span><input type="number" name="system.abilities.{{id}}" value="{{value}}"></label>{{/each}}</article><article class="panel"><h2>Origin</h2><label>Species ID<input name="system.speciesId" value="{{system.speciesId}}"></label><label>Archetype ID<input name="system.archetypeId" value="{{system.archetypeId}}"></label><label>Mandated Talent ID<input name="system.mandatedTalentId" value="{{system.mandatedTalentId}}"></label></article><article class="panel"><h2>Talents</h2>{{#each talents}}<details><summary>{{name}}</summary>{{{system.description}}}</details>{{/each}}</article></div></section>
+  <section class="tab" data-group="primary" data-tab="items"><div class="a2e-grid"><article class="panel"><h2>Equipment</h2>{{#each equipment}}<div class="item-line"><b>{{name}}</b><span>{{type}} · {{system.mass}} kg</span></div>{{/each}}</article><article class="panel"><h2>Damage Log</h2>{{#each system.play.damageLog}}<div class="item-line">{{raw}} {{type}} - {{resistance}} = <b>{{final}} {{severity}}</b></div>{{/each}}</article></div></section>
+  <section class="tab" data-group="primary" data-tab="notes"><label>Background<textarea name="system.identity.background">{{system.identity.background}}</textarea></label><label>Goals<textarea name="system.identity.goals">{{system.identity.goals}}</textarea></label><label>Connections<textarea name="system.identity.connections">{{system.identity.connections}}</textarea></label><label>Notes<textarea name="system.identity.notes">{{system.identity.notes}}</textarea></label></section>
+</form>
