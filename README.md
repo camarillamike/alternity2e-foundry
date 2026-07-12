@@ -2,6 +2,17 @@
 
 > Private campaign repository. This package includes material derived from a lawfully owned rulebook and is not licensed for public redistribution.
 
+Version 0.2.0 turns the prototype into a playable Foundry workflow:
+
+- Full hero sheet with Play, Character, Items, Advancement, and Notes views.
+- Desktop Hero Forge JSON import/export.
+- Optional eight-step guided creator; manual editing and imports remain available.
+- Nine categorized world compendiums generated from the shared authoritative catalog.
+- Eight-impulse Combat Tracker integration with per-action speed scheduling.
+- Drag/drop Items, source refresh, level advancement, ammunition/reload tracking, conditions, armor penetration, wound escalation, recovery, and targeted chat damage.
+
+After upgrading an existing world, a GM can use **Items → Rebuild compendiums** on a hero. Use **Refresh character Items** to update embedded source material while retaining ranks, quantities, equipped state, upgrades, and ammunition.
+
 This is a private-use Foundry VTT game system built alongside the standalone Alternity Hero Forge. It targets Foundry VTT 13+ and is verified structurally for Foundry 14.
 
 ## Install
@@ -10,7 +21,7 @@ This is a private-use Foundry VTT game system built alongside the standalone Alt
 2. Extract the `alternity2e` folder into `{Foundry user data}/Data/systems/`.
 3. Confirm the final path is `Data/systems/alternity2e/system.json`.
 4. Restart Foundry and create a world using **Alternity 2e (Private System)**.
-5. As GM, enable **Install private Core Rulebook catalogs** in System Settings if you are authorized to use the bundled personal-use catalog.
+5. As GM, leave **Install Core Rulebook compendiums** enabled if you are authorized to use the bundled personal-use catalog.
 
 ### Foundry manifest installation
 
@@ -20,7 +31,7 @@ After this repository is made public, paste this URL into Foundry's **Install Sy
 https://raw.githubusercontent.com/camarillamike/alternity2e-foundry/main/system.json
 ```
 
-While the repository is private, GitHub authentication prevents Foundry from downloading the manifest or release ZIP. The system remains installed after repository visibility is changed back to private, but automatic update checks will not work until the files are public again.
+While the repository is private, GitHub authentication prevents Foundry from downloading the manifest or release ZIP. The installed system remains available after changing the repository back to private, but automatic update checks require the files to be public.
 
 ## Features
 
@@ -32,9 +43,7 @@ While the repository is private, GitHub authentication prevents Foundry from dow
 - Targeted damage buttons in chat.
 - Round and impulse state, hero points, conditions, damage history, attacks, skills, talents, and equipment.
 - Standalone character interchange through `game.alternity2e.importStandaloneCharacter(data)` and `game.alternity2e.exportStandaloneCharacter(actor)`.
-- Visible Actor-sheet Import and Export buttons for desktop character JSON files.
-- Working Play, Character, Items, and Notes tabs with Play selected on first open.
-- Idempotent private catalog installation and updates.
+- Idempotent categorized compendium installation and source updates.
 
 ## Character import
 
