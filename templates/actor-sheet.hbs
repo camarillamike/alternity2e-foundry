@@ -2,14 +2,14 @@
   <header class="a2e-header">
     <img src="{{actor.img}}" data-edit="img" title="{{actor.name}}">
     <div><input class="a2e-name" name="name" value="{{actor.name}}"><p>Level <input type="number" name="system.level" value="{{system.level}}"> · {{actor.type}} · TE <input type="number" name="system.campaign.techEra" value="{{system.campaign.techEra}}"></p></div>
-    <button type="button" data-action="exportCharacter"><i class="fas fa-file-export"></i> Export</button>
+    <div class="header-actions"><button type="button" data-action="importCharacter"><i class="fas fa-file-import"></i> Import</button><button type="button" data-action="exportCharacter"><i class="fas fa-file-export"></i> Export</button></div>
   </header>
 
   <section class="a2e-summary">
     <div><strong>{{system.derived.initiative.target}}</strong>Initiative</div><div><strong>{{system.derived.speed}} m</strong>Speed</div><div><strong>{{system.derived.woundPenalty}}</strong>Wound steps</div><div><strong>{{system.derived.armor.physical}} / {{system.derived.armor.energy}}</strong>Armor P/E</div>
   </section>
 
-  <nav class="tabs" data-group="primary"><a data-tab="play">Play</a><a data-tab="build">Character</a><a data-tab="items">Items</a><a data-tab="notes">Notes</a></nav>
+  <nav class="tabs" data-group="primary"><a class="item" data-tab="play">Play</a><a class="item" data-tab="build">Character</a><a class="item" data-tab="items">Items</a><a class="item" data-tab="notes">Notes</a></nav>
   <section class="tab" data-group="primary" data-tab="play">
     <div class="a2e-grid">
       <article class="panel"><h2>Round {{system.play.round}} · Impulse {{system.play.impulse}}/8</h2><button type="button" data-action="nextImpulse">Advance impulse</button><h3>Hero Points</h3><div class="counter"><button type="button" data-action="heroDown">−</button><strong>{{system.heroPoints}}</strong><button type="button" data-action="heroUp">+</button></div></article>

@@ -8,10 +8,11 @@ export class AlternityActorSheet extends HandlebarsApplicationMixin(ActorSheetV2
     actions: {
       rollSkill: AlternityActorSheet.#rollSkill, rollWeapon: AlternityActorSheet.#rollWeapon, applyDamage: AlternityActorSheet.#applyDamage,
       heroUp: AlternityActorSheet.#heroUp, heroDown: AlternityActorSheet.#heroDown, nextImpulse: AlternityActorSheet.#nextImpulse,
-      toggleWound: AlternityActorSheet.#toggleWound, toggleStatus: AlternityActorSheet.#toggleStatus, exportCharacter: AlternityActorSheet.#exportCharacter
+      toggleWound: AlternityActorSheet.#toggleWound, toggleStatus: AlternityActorSheet.#toggleStatus, exportCharacter: AlternityActorSheet.#exportCharacter, importCharacter: AlternityActorSheet.#importCharacter
     }
   };
   static PARTS = { main: { template: "systems/alternity2e/templates/actor-sheet.hbs" } };
+  tabGroups = { primary: "play" };
   async _prepareContext(options) {
     const context = await super._prepareContext(options), actor = this.actor, s = actor.system;
     return foundry.utils.mergeObject(context, {
@@ -35,6 +36,17 @@ export class AlternityActorSheet extends HandlebarsApplicationMixin(ActorSheetV2
   static async #toggleWound(event, target) { const row = target.dataset.row, index = Number(target.dataset.index), current = this.actor.system.wounds[row]; await this.actor.update({ [`system.wounds.${row}`]: current === index + 1 ? index : index + 1 }); }
   static async #toggleStatus(event, target) { const id = target.dataset.status, values = [...this.actor.system.play.statuses], next = values.includes(id) ? values.filter(x => x !== id) : [...values, id]; await this.actor.update({ "system.play.statuses": next }); }
   static async #exportCharacter() { const data = game.alternity2e.exportStandaloneCharacter(this.actor); foundry.utils.saveDataToFile(JSON.stringify(data, null, 2), "application/json", `${this.actor.name}.alternity.json`); }
+  static async #importCharacter() {
+    const input = document.createElement("input"); input.type = "file"; input.accept = ".json,application/json";
+    input.addEventListener("change", async () => { try { const file = input.files?.[0]; if (!file) return; const data = JSON.parse(await file.text()); await game.alternity2e.importStandaloneCharacter(data, { actor: this.actor }); ui.notifications.info(`Imported ${data.identity?.name || file.name} into ${this.actor.name}.`); this.render({ force: true }); } catch (error) { console.error(error); ui.notifications.error(`Character import failed: ${error.message}`); } }, { once: true });
+    input.click();
+  }
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    const activate = id => { this.tabGroups.primary = id; this.element.querySelectorAll('[data-group="primary"][data-tab]').forEach(element => element.classList.toggle("active", element.dataset.tab === id)); };
+    this.element.querySelectorAll('nav[data-group="primary"] [data-tab]').forEach(tab => tab.addEventListener("click", event => { event.preventDefault(); activate(tab.dataset.tab); }));
+    activate(this.tabGroups.primary || "play");
+  }
 }
 
 export class AlternityItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {

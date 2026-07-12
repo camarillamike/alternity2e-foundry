@@ -1,16 +1,21 @@
 import { catalogDocuments } from "./catalogs.mjs";
 
-export async function importStandaloneCharacter(character) {
-  if (!game.user.can("ACTOR_CREATE")) throw new Error("You do not have permission to create Actors.");
-  const actor = await Actor.create({ name: character.identity?.name || "Imported Hero", type: "hero", system: {
+export async function importStandaloneCharacter(character, { actor = null } = {}) {
+  if (!character || typeof character !== "object" || Array.isArray(character)) throw new Error("The selected file is not a valid character.");
+  if (!character.abilities || !character.skills || !character.wounds) throw new Error("The character file is missing abilities, skills, or wounds.");
+  if (!actor && !game.user.can("ACTOR_CREATE")) throw new Error("You do not have permission to create Actors.");
+  if (actor && !actor.isOwner) throw new Error("You do not have permission to update this Actor.");
+  const actorSource = { name: character.identity?.name || actor?.name || "Imported Hero", type: "hero", system: {
     schemaVersion: 1, level: character.level || 1, heroPoints: character.heroPoints ?? 1, abilities: character.abilities, wounds: character.wounds,
     speciesId: character.species || "human", archetypeId: character.archetype || "", mandatedTalentId: character.mandatedTalent || "", campaign: character.campaign,
     identity: { player: character.identity?.player || "", concept: character.identity?.concept || "", background: character.identity?.background || "", goals: character.identity?.goals || "", connections: character.identity?.connections || "", notes: character.identity?.notes || "" },
     play: character.play || { round: 1, impulse: 1, statuses: [], damageLog: [], lastDamage: null }, migrationHistory: character.migrationHistory || []
-  }});
+  }};
+  if (actor) await actor.update(actorSource); else actor = await Actor.create(actorSource);
   const sources = catalogDocuments(), wanted = new Set([...(character.talents || []).map(id => `talent:${id}`), ...(character.gear || []).map(id => `gear:${id}`), ...(character.gear || []).map(id => `weapon:${id}`), ...(character.gear || []).map(id => `armor:${id}`), ...(character.gear || []).map(id => `tool:${id}`)]);
   const items = sources.filter(x => wanted.has(`${x.type}:${x.system.sourceId}`));
   for (const [id, state] of Object.entries(character.skills || {})) { const source = sources.find(x => x.type === "skill" && x.system.sourceId === id); if (source) items.push(foundry.utils.mergeObject(source, { system: { ranks: state.ranks || 0, keyAbility: state.keyAbility || source.system.keyAbility } }, { inplace: false })); }
+  if (actor.items.size) await actor.deleteEmbeddedDocuments("Item", actor.items.map(item => item.id));
   await actor.createEmbeddedDocuments("Item", items); return actor;
 }
 

@@ -32,6 +32,8 @@ While the repository is private, GitHub authentication prevents Foundry from dow
 - Targeted damage buttons in chat.
 - Round and impulse state, hero points, conditions, damage history, attacks, skills, talents, and equipment.
 - Standalone character interchange through `game.alternity2e.importStandaloneCharacter(data)` and `game.alternity2e.exportStandaloneCharacter(actor)`.
+- Visible Actor-sheet Import and Export buttons for desktop character JSON files.
+- Working Play, Character, Items, and Notes tabs with Play selected on first open.
 - Idempotent private catalog installation and updates.
 
 ## Character import
