@@ -31,7 +31,7 @@ export class AlternityActorSheet extends HandlebarsApplicationMixin(ActorSheetV2
       skillGroups: Object.entries(skillItems.reduce((all, item) => ((all[item.system.category] ??= []).push({ item, target: 20 - s.abilities[item.system.keyAbility] - item.system.ranks, steps: s.derived.woundPenalty + actor.statusSteps }), all), {})).map(([name, rows]) => ({ name, rows })),
       attacks: actor.items.filter(i => i.type === "weapon"), talents: actor.items.filter(i => i.type === "talent"),
       equipmentGroups: Object.entries(actor.items.filter(i => ["armor", "tool", "gear", "upgrade"].includes(i.type)).reduce((all, item) => ((all[item.system.category || item.type] ??= []).push(item), all), {})).map(([name, items]) => ({ name, items })),
-      statuses: Object.entries({ blinded: "Blinded", dazed: "Dazed", distracted: "Distracted", grappled: "Grappled", impaired: "Impaired", prone: "Prone", slowed: "Slowed", weakened: "Weakened", incapacitated: "Incapacitated" }).map(([id, label]) => ({ id, label, active: s.play.statuses.includes(id) }))
+      statuses: Object.entries({ blinded: "Blinded", dazed: "Dazed", distracted: "Distracted", grappled: "Grappled", impaired: "Impaired", prone: "Prone", slowed: "Slowed", weakened: "Weakened", incapacitated: "Incapacitated", insane: "Insane", "off-balance": "Off-Balance", stun: "Stunned", "damage-over-time": "Damage Over Time" }).map(([id, label]) => ({ id, label, active: s.play.statuses.includes(id) }))
     }, { inplace: false });
   }
   static async #rollSkill(event, target) { await this.actor.rollSkill(this.actor.items.get(target.dataset.itemId)); }

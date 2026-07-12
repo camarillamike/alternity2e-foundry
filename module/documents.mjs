@@ -18,7 +18,7 @@ export class AlternityActor extends Actor {
   #effects(type) { return this.ruleEffects.filter(effect => effect.type === type).reduce((sum, effect) => sum + Number(effect.value || 0), 0); }
   get armorResistance() { const armor = this.items.filter(i => i.type === "armor" && i.system.equipped), natural = this.ruleEffects.filter(e => e.type === "armor"); return { physical: armor.reduce((n, i) => n + Number(i.system.physical || 0), 0) + natural.reduce((n, e) => n + Number(e.physical || 0), 0), energy: armor.reduce((n, i) => n + Number(i.system.energy || 0), 0) + natural.reduce((n, e) => n + Number(e.energy || 0), 0) }; }
   get currentSpeed() { const statuses = this.system.play.statuses; if (this.system.wounds.mortal || statuses.includes("incapacitated")) return 0; if (statuses.includes("prone")) return 2; const base = Number(this.ruleEffects.filter(e => e.type === "baseSpeedOverride").at(-1)?.value ?? 20) + this.#effects("speed"); return statuses.some(x => ["blinded", "impaired", "slowed"].includes(x)) ? Math.max(2, base / 2) : base; }
-  get statusSteps() { const statuses = this.system.play.statuses; return statuses.includes("impaired") ? -2 : statuses.includes("weakened") || statuses.includes("distracted") ? -1 : 0; }
+  get statusSteps() { const statuses = this.system.play.statuses; return statuses.includes("impaired") ? -2 : statuses.includes("weakened") || statuses.includes("grappled") ? -1 : 0; }
   getSkill(id) { return this.items.find(i => i.type === "skill" && i.system.sourceId === id); }
   async rollSkill(itemOrId, { steps = 0, label } = {}) {
     const item = typeof itemOrId === "string" ? this.getSkill(itemOrId) : itemOrId, ability = this.system.abilities[item?.system.keyAbility] || 0, ranks = item?.system.ranks || 0;
@@ -26,12 +26,16 @@ export class AlternityActor extends Actor {
     const target = skillTarget(ability, ranks), finalSteps = Number(steps) + categorySteps + directSteps + this.system.derived.woundPenalty + this.statusSteps, die = await new Roll(stepFormula(finalSteps)).evaluate();
     const degree = rollDegree(die.total, target);
     await die.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this }), flavor: `<strong>${label || item?.name || "Skill Check"}</strong><br>Target ${target}; ${finalSteps >= 0 ? "+" : ""}${finalSteps} steps<br><b>${degree}</b>` });
+    if (this.system.play.statuses.includes("off-balance")) await this.update({ "system.play.statuses": this.system.play.statuses.filter(status => status !== "off-balance") });
     return { total: die.total, target, steps: finalSteps, degree };
   }
   async rollWeapon(item) {
     if (item.system.ammo.max > 0 && item.system.ammo.value < 1) return ui.notifications.warn(`${item.name} is empty. Reload it before attacking.`);
-    const skillId = item.system.range === "Adjacent" ? "melee" : item.system.damageType === "energy" ? "energy-weapon" : "firearm";
-    const check = await this.rollSkill(skillId, { label: item.name, steps: item.system.effects.filter(e => e.type === "attackSteps").reduce((n, e) => n + Number(e.value || 0), 0) });
+    const skillId = item.system.range === "Adjacent" ? "melee" : item.system.damageType === "energy" ? "energy-weapon" : "firearm", melee = item.system.range === "Adjacent";
+    const target = [...game.user.targets][0]?.actor, targetStatuses = target?.system.play.statuses || [];
+    let situational = this.system.play.statuses.includes("blinded") ? -5 : 0;
+    if (targetStatuses.includes("blinded")) situational += 2; if (targetStatuses.includes("distracted") || targetStatuses.includes("impaired")) situational += 1; if (targetStatuses.includes("prone")) situational += melee ? 1 : -1;
+    const check = await this.rollSkill(skillId, { label: item.name, steps: situational + item.system.effects.filter(e => e.type === "attackSteps").reduce((n, e) => n + Number(e.value || 0), 0) });
     if (check.degree === "Failure") return check;
     const parsed = parseDamage(item.system.damage); if (!parsed) return check;
     const bonus = (check.degree === "Average" ? parsed.averageBonus : parsed.excellentBonus) + this.#effects("damage"), formula = `${parsed.dice}${bonus >= 0 ? "+" : ""}${bonus}`, damage = await new Roll(formula).evaluate(), hits = check.degree === "Stellar" ? 2 : 1;
@@ -66,7 +70,8 @@ export class AlternityActor extends Actor {
   }
   async scheduleCombatAction(speed = 1) {
     const combat = game.combat, combatant = combat?.combatants.find(entry => entry.actorId === this.id);
-    if (combat?.started && combatant && combat.schedule) await combat.schedule(combatant, speed);
+    const delay = this.system.play.statuses.some(status => ["dazed", "slowed"].includes(status)) ? 1 : 0;
+    if (combat?.started && combatant && combat.schedule) await combat.schedule(combatant, Number(speed) + delay);
   }
 }
 
