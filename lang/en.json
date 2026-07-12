@@ -4,5 +4,20 @@
   "A2E.Ability.vitality": "Vitality",
   "A2E.Ability.intelligence": "Intelligence",
   "A2E.Ability.focus": "Focus",
-  "A2E.Ability.personality": "Personality"
+  "A2E.Ability.personality": "Personality",
+  "TYPES.Actor.hero": "Hero",
+  "TYPES.Actor.npc": "NPC",
+  "TYPES.Actor.creature": "Creature",
+  "TYPES.Actor.drone": "Drone",
+  "TYPES.Actor.vehicle": "Vehicle",
+  "TYPES.Item.skill": "Skill",
+  "TYPES.Item.talent": "Talent",
+  "TYPES.Item.weapon": "Weapon",
+  "TYPES.Item.armor": "Armor",
+  "TYPES.Item.tool": "Tool",
+  "TYPES.Item.gear": "Gear",
+  "TYPES.Item.upgrade": "Upgrade",
+  "TYPES.Item.species": "Species",
+  "TYPES.Item.archetype": "Archetype",
+  "TYPES.Item.condition": "Condition"
 }
