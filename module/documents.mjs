@@ -1,6 +1,7 @@
 import { damageSeverity, durability, applyWound, woundPenalty, parseDamage, skillTarget, stepFormula, rollDegree } from "./rules.mjs";
-import { species, archetypes } from "./catalogs.mjs";
+import { species, archetypes, gear } from "./catalogs.mjs";
 import { calculateEncumbrance } from "./inventory.mjs";
+import { specialAmmoEffect } from "./ammunition.mjs";
 
 export class AlternityActor extends Actor {
   prepareDerivedData() {
@@ -44,7 +45,9 @@ export class AlternityActor extends Actor {
     if (item.system.ammo.max > 0 && item.system.ammo.value < 1) return ui.notifications.warn(`${item.name} is empty. Reload it before attacking.`);
     const combat = game.combat?.started ? game.combat : null, combatant = combat?.combatantForActor?.(this);
     if (combat && !combat.isReady(combatant)) return ui.notifications.warn(`${this.name} is not ready to attack in this impulse.`);
-    const modifier = combat?.getModifier?.(this, "attack"), ammoCost = Math.max(1, Number(modifier?.ammoCost || 1));
+    const modifier = combat?.getModifier?.(this, "attack"), ammoCost = Math.max(1, Number(modifier?.ammoCost || 1)), ammo = item.system.ammo, payload = ammo.mode === "loadout" ? gear.find(row => row.id === ammo.payload) : null, attackDamage = payload?.damage || item.system.damage, attackDamageType = payload?.damageType || item.system.damageType, attackSpecial = [...(item.system.special || []), ...(payload?.special || [])], specialEffect = ammo.specialAvailable ? specialAmmoEffect(ammo.specialType, { sourceId: payload?.id || item.system.sourceId, weaponType: item.system.weaponType, damageType: attackDamageType, techEra: item.system.techEra }) : specialAmmoEffect("normal");
+    if (ammo.mode === "loadout" && !payload) return ui.notifications.warn(`Choose a valid loaded payload for ${item.name}.`);
+    if (ammo.specialType !== "normal" && (!ammo.specialAvailable || !specialEffect.valid)) return ui.notifications.warn(`${item.name} does not have a valid supply of that special ammunition.`);
     if (["burst", "fullauto"].includes(modifier?.id) && !item.system.special.some(value => /autofire/i.test(value))) return ui.notifications.warn(`${item.name} does not have Autofire.`);
     if (item.system.ammo.max > 0 && item.system.ammo.value < ammoCost) return ui.notifications.warn(`${item.name} needs ${ammoCost} rounds for ${modifier?.label || "that attack"}.`);
     if (modifier?.id === "fullauto") return this.rollFullAuto(item, modifier);
@@ -54,30 +57,31 @@ export class AlternityActor extends Actor {
     if (targetStatuses.includes("blinded")) situational += 2; if (targetStatuses.includes("distracted") || targetStatuses.includes("impaired")) situational += 1; if (targetStatuses.includes("prone")) situational += melee ? 1 : -1;
     if (target && combat?.targetDefenseModifier) situational += combat.targetDefenseModifier(target);
     const check = await this.rollSkill(skillId, { label: item.name, steps: situational + item.system.effects.filter(e => e.type === "attackSteps").reduce((n, e) => n + Number(e.value || 0), 0) });
-    if (item.system.ammo.max > 0) await item.update({ "system.ammo.value": Math.max(0, item.system.ammo.value - ammoCost) });
+    await this.consumeAmmunition(item, ammoCost);
     await this.scheduleCombatAction(item.system.speed, { label: modifier?.label ? `${item.name} - ${modifier.label}` : item.name, kind: "attack" });
     if (check.degree === "Failure") return check;
-    const parsed = parseDamage(item.system.damage); if (!parsed) return check;
-    const bonus = (check.degree === "Average" ? parsed.averageBonus : parsed.excellentBonus) + this._effectTotal("damage"), formula = `${parsed.dice}${bonus >= 0 ? "+" : ""}${bonus}`, damage = await new Roll(formula).evaluate(), hits = (check.degree === "Stellar" ? 2 : 1) + Number(modifier?.extraWounds || 0);
-    const ap = Number(item.system.special.find(value => /^AP\s+\d+/i.test(value))?.match(/\d+/)?.[0] || 0);
-    await damage.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this }), flavor: `<strong>${item.name} Damage</strong><br>${check.degree} hit · ${item.system.damageType}${hits === 2 ? " · one additional wound" : ""}<br><button data-alternity-damage="${damage.total}" data-damage-type="${item.system.damageType}" data-wound-hits="${hits}" data-armor-penetration="${ap}">Apply ${damage.total} Damage to Target</button>` });
+    const parsed = parseDamage(attackDamage); if (!parsed) { if (payload) await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: this }), content: `<strong>${item.name}</strong> launches <strong>${payload.name}</strong>: ${payload.damage}. Resolve the payload's listed effect.` }); return check; }
+    const bonus = (check.degree === "Average" ? parsed.averageBonus : parsed.excellentBonus) + this._effectTotal("damage") + Number(specialEffect.damageBonus || 0), formula = `${parsed.dice}${bonus >= 0 ? "+" : ""}${bonus}`, damage = await new Roll(formula).evaluate(), hits = (check.degree === "Stellar" ? 2 : 1) + Number(modifier?.extraWounds || 0);
+    const ap = Number(attackSpecial.find(value => /^AP\s+\d+/i.test(value))?.match(/\d+/)?.[0] || 0) + Number(specialEffect.armorPenetration || 0), specialNote = ammo.specialType !== "normal" ? ` · ${specialEffect.label}${specialEffect.trait ? ` (${specialEffect.trait})` : ""}` : "", payloadNote = payload ? ` · ${payload.name} (${payload.special.join(", ")})` : "";
+    await damage.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this }), flavor: `<strong>${item.name} Damage</strong><br>${check.degree} hit · ${attackDamageType}${hits > 1 ? ` · ${hits} wound boxes` : ""}${payloadNote}${specialNote}<br><button data-alternity-damage="${damage.total}" data-damage-type="${attackDamageType}" data-wound-hits="${hits}" data-armor-penetration="${ap}" data-armor-bonus="${Number(specialEffect.armorBonus || 0)}">Apply ${damage.total} Damage to Target</button>` });
     return { ...check, damage: damage.total };
   }
   async rollFullAuto(item, modifier) {
     const targets = [...game.user.targets]; if (!targets.length) return ui.notifications.warn("Target every token in the full-auto area before attacking.");
-    const skillId = item.system.damageType === "energy" ? "energy-weapon" : "firearm", parsed = parseDamage(item.system.damage); if (!parsed) return;
+    const skillId = item.system.damageType === "energy" ? "energy-weapon" : "firearm", parsed = parseDamage(item.system.damage), ammo = item.system.ammo, specialEffect = ammo.specialAvailable ? specialAmmoEffect(ammo.specialType, { sourceId: item.system.sourceId, weaponType: item.system.weaponType, damageType: item.system.damageType, techEra: item.system.techEra }) : specialAmmoEffect("normal"); if (!parsed) return;
     const results = [];
     for (const [index, token] of targets.entries()) {
       const target = token.actor, statuses = target?.system.play.statuses || []; let steps = -2 * (index + 1);
       if (statuses.includes("blinded")) steps += 2; if (statuses.includes("distracted") || statuses.includes("impaired")) steps += 1; if (statuses.includes("prone")) steps -= 1; if (game.combat?.targetDefenseModifier) steps += game.combat.targetDefenseModifier(target);
       const check = await this.rollSkill(skillId, { label: `${item.name} Full Auto - ${token.name}`, steps }); results.push({ token, check }); if (check.degree === "Failure") continue;
-      const bonus = (check.degree === "Average" ? parsed.averageBonus : parsed.excellentBonus) + this._effectTotal("damage"), damage = await new Roll(`${parsed.dice}${bonus >= 0 ? "+" : ""}${bonus}`).evaluate(), hits = check.degree === "Stellar" ? 2 : 1, ap = Number(item.system.special.find(value => /^AP\s+\d+/i.test(value))?.match(/\d+/)?.[0] || 0);
-      await damage.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this }), flavor: `<strong>${item.name} Full Auto Damage - ${token.name}</strong><br>${check.degree} hit · ${item.system.damageType}<br><button data-alternity-damage="${damage.total}" data-damage-type="${item.system.damageType}" data-wound-hits="${hits}" data-armor-penetration="${ap}" data-target-token-id="${token.id}">Apply ${damage.total} Damage to ${token.name}</button>` });
+      const bonus = (check.degree === "Average" ? parsed.averageBonus : parsed.excellentBonus) + this._effectTotal("damage") + Number(specialEffect.damageBonus || 0), damage = await new Roll(`${parsed.dice}${bonus >= 0 ? "+" : ""}${bonus}`).evaluate(), hits = check.degree === "Stellar" ? 2 : 1, ap = Number(item.system.special.find(value => /^AP\s+\d+/i.test(value))?.match(/\d+/)?.[0] || 0) + Number(specialEffect.armorPenetration || 0);
+      await damage.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this }), flavor: `<strong>${item.name} Full Auto Damage - ${token.name}</strong><br>${check.degree} hit · ${item.system.damageType}${ammo.specialType !== "normal" ? ` · ${specialEffect.label}` : ""}<br><button data-alternity-damage="${damage.total}" data-damage-type="${item.system.damageType}" data-wound-hits="${hits}" data-armor-penetration="${ap}" data-armor-bonus="${Number(specialEffect.armorBonus || 0)}" data-target-token-id="${token.id}">Apply ${damage.total} Damage to ${token.name}</button>` });
     }
-    await item.update({ "system.ammo.value": Math.max(0, item.system.ammo.value - 10) }); await this.scheduleCombatAction(item.system.speed, { label: `${item.name} - Full Auto`, kind: "attack" }); return results;
+    await this.consumeAmmunition(item, 10); await this.scheduleCombatAction(item.system.speed, { label: `${item.name} - Full Auto`, kind: "attack" }); return results;
   }
-  async applyDamage(raw, type = "physical", { woundHits = 1, armorPenetration = 0 } = {}) {
-    const listedResistance = ["physical", "energy"].includes(type) ? this.system.derived.armor[type] : 0, resistance = Math.max(0, listedResistance - Number(armorPenetration || 0)), final = Math.max(0, Number(raw) - resistance), base = damageSeverity(final), wounds = foundry.utils.deepClone(this.system.wounds), applied = [];
+  async consumeAmmunition(item, amount = 1) { const ammo = item.system.ammo; if (!ammo || ammo.mode === "none") return; const update = { "system.ammo.specialUsed": ammo.specialType !== "normal" && ammo.specialAvailable || ammo.specialUsed }; if (ammo.mode === "consumable" && item.system.quantity > 1) update["system.quantity"] = item.system.quantity - 1; else update["system.ammo.value"] = Math.max(0, ammo.value - amount); await item.update(update); }
+  async applyDamage(raw, type = "physical", { woundHits = 1, armorPenetration = 0, armorBonus = 0 } = {}) {
+    const listedResistance = ["physical", "energy"].includes(type) ? this.system.derived.armor[type] : 0, effectiveArmorBonus = listedResistance > 0 ? Number(armorBonus || 0) : 0, resistance = Math.max(0, listedResistance + effectiveArmorBonus - Number(armorPenetration || 0)), final = Math.max(0, Number(raw) - resistance), base = damageSeverity(final), wounds = foundry.utils.deepClone(this.system.wounds), applied = [];
     for (let i = 0; i < woundHits; i++) applied.push(applyWound(wounds, this.system.derived.durability, base));
     const entry = { date: new Date().toISOString(), raw: Number(raw), type, resistance, final, baseSeverity: base, severity: applied.map(x => x.severity).filter(Boolean).join(", "), escalated: applied.some(x => x.escalated), woundHits };
     await this.update({ "system.wounds": wounds, "system.play.lastDamage": entry, "system.play.damageLog": [entry, ...this.system.play.damageLog].slice(0, 20) });

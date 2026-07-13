@@ -18,6 +18,15 @@ export class AlternityCombat extends Combat {
     await this.update({ round: 1, turn: null, "flags.alternity2e.impulse": 1, "flags.alternity2e.sequenceCounter": 0 });
     await this.initializeSchedules(); await this.syncActors(); return result;
   }
+  async endCombat() { await this.resolveSpecialAmmunition(); return super.endCombat(); }
+  async resolveSpecialAmmunition() {
+    const actors = [...new Map(this.combatants.filter(entry => entry.actor).map(entry => [entry.actor.id, entry.actor])).values()];
+    for (const actor of actors) for (const weapon of actor.items.filter(item => item.type === "weapon" && item.system.ammo?.specialUsed)) {
+      const roll = await new Roll("1d20").evaluate(), depleted = roll.total <= 10, type = weapon.system.ammo.specialType;
+      await weapon.update({ "system.ammo.specialUsed": false, "system.ammo.specialAvailable": depleted ? false : weapon.system.ammo.specialAvailable, "system.ammo.specialType": depleted ? "normal" : type });
+      await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `<strong>${weapon.name} Special Ammunition</strong><br>${depleted ? "Supply depleted - reverting to normal ammunition." : "Special ammunition remains available."}` });
+    }
+  }
   async initializeSchedules() {
     const ordered = [...this.combatants].sort((a, b) => Number(flag(b, "initiativePriority", 0)) - Number(flag(a, "initiativePriority", 0)) || Number(a.actor?.system?.derived?.initiative?.target || 99) - Number(b.actor?.system?.derived?.initiative?.target || 99));
     const updates = ordered.map((combatant, index) => {

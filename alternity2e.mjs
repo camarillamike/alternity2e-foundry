@@ -7,6 +7,7 @@ import { importStandaloneCharacter, exportStandaloneCharacter } from "./module/i
 import { registerRuntimeHooks } from "./module/hooks.mjs";
 import { AlternityCombat, registerCombatHooks } from "./module/combat.mjs";
 import { AlternityCreationWizard } from "./module/wizard.mjs";
+import { migrateActorAmmunition } from "./module/ammunition.mjs";
 
 Hooks.once("init", () => {
   console.log("Alternity 2e | Initializing private game system");
@@ -25,9 +26,10 @@ Hooks.once("init", () => {
   Handlebars.registerHelper("a2eEq", (a, b) => String(a) === String(b));
   Handlebars.registerHelper("a2eAdd", (a, b) => Number(a) + Number(b));
   Handlebars.registerHelper("a2eRange", (start, end) => Array.from({ length: end - start + 1 }, (_, index) => start + index));
-  game.alternity2e = { importStandaloneCharacter, exportStandaloneCharacter, installPrivateCatalogs, refreshCompendiums, refreshActorSources, openCreationWizard: actor => new AlternityCreationWizard({ actor }).render(true) };
+  game.alternity2e = { importStandaloneCharacter, exportStandaloneCharacter, installPrivateCatalogs, refreshCompendiums, refreshActorSources, migrateActorAmmunition, openCreationWizard: actor => new AlternityCreationWizard({ actor }).render(true) };
 });
 
 Hooks.once("ready", async () => {
   if (game.user.isGM && game.settings.get("alternity2e", "installPrivateCatalogs")) await installPrivateCatalogs();
+  if (game.user.isGM) { const migrated = (await Promise.all(game.actors.map(actor => migrateActorAmmunition(actor)))).reduce((sum, count) => sum + count, 0); if (migrated) ui.notifications.info(`Updated ammunition profiles for ${migrated} existing weapon Items.`); }
 });

@@ -2,7 +2,17 @@
 
 > Private campaign repository. This package includes material derived from a lawfully owned rulebook and is not licensed for public redistribution.
 
-Version 0.3.1 adds inventory integrity and full encumbrance handling to the rulebook action scheduler:
+Version 0.4.0 adds complete tactical ammunition handling:
+
+- Loaded ammunition is always tracked; ordinary reserves can be abstract or limited through a world setting.
+- Unlisted modern magazines and power cells default to 10 attacks, while explicit capacities and description-sourced exceptions are retained.
+- Normal fire, burst, and full auto consume 1, 3, and 10 rounds respectively.
+- Reload traits use their listed impulse cost; revolvers and shotguns load one round per action, with revolver speed-loader support.
+- Grenade and Z-missile launchers track capacity, reserves, and selected payload; thrown grenades and one-shot weapons are consumed.
+- Armor-piercing, hollow-point, incendiary, and Deto-Max ammunition apply their mechanical changes and roll for depletion when combat ends.
+- Existing embedded weapons migrate to the new profile without discarding an already-tracked loaded count.
+
+Version 0.3.1 added inventory integrity and full encumbrance handling to the rulebook action scheduler:
 
 - Compendium drops use one capture-phase handler and cannot multiply after sheet rerenders.
 - Repeated source Items increase quantity; unique skills and talents cannot duplicate.

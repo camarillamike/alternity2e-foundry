@@ -25,7 +25,7 @@ export class AlternityItemData extends foundry.abstract.TypeDataModel {
       sourceId: text(), description: new f.HTMLField(), page: int(0, 0), quantity: int(1, 0), equipped: new f.BooleanField({ initial: true }),
       ranks: int(0, 0), keyAbility: text(), category: text(), constellation: text(), parentId: text(),
       techEra: int(0, 0), itemClass: int(0, 0), restriction: text("G"), mass: new f.NumberField({ initial: 0, min: 0 }),
-      weaponType: text(), range: text(), speed: int(0, 0), damage: text(), damageType: text(), special: new f.ArrayField(text()), ammo: new f.SchemaField({ value: int(0, 0), max: int(0, 0) }),
+      weaponType: text(), range: text(), speed: int(0, 0), damage: text(), damageType: text(), special: new f.ArrayField(text()), ammo: new f.SchemaField({ profileVersion: int(0, 0), value: int(0, 0), max: int(0, 0), mode: text("none"), reloadCost: int(0, 0), reloadAmount: int(0, 0), reserve: int(0, 0), reserveUnit: text("rounds"), payload: text(), specialType: text("normal"), specialAvailable: new f.BooleanField({ initial: false }), specialUsed: new f.BooleanField({ initial: false }), speedLoader: new f.BooleanField({ initial: false }) }),
       move: int(0, -100), penalty: int(0, -100), physical: int(0, 0), energy: int(0, 0),
       effects: new f.ArrayField(new f.ObjectField()), requirements: new f.ArrayField(new f.ObjectField()), upgrades: new f.ArrayField(text()), metadata: new f.ObjectField()
     };

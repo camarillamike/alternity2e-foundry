@@ -4,8 +4,9 @@ import { species } from "../data/species.js";
 import { archetypes } from "../data/archetypes.js";
 import { talents } from "../data/talents.js";
 import { gear, upgrades } from "../data/gear.js";
+import { weaponAmmoProfile } from "./ammunition.mjs";
 
-const VERSION = "0.3.1";
+const VERSION = "0.4.0";
 const html = value => String(value || "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 const base = (row, type) => ({ name: row.name, type, system: { sourceId: row.id, description: html(row.description || row.notes || ""), page: row.page || 0, metadata: row } });
 const conditions = [
@@ -23,7 +24,7 @@ export function catalogDocuments() {
   return [
     ...skills.map(row => ({ ...base(row, "skill"), system: { ...base(row, "skill").system, keyAbility: row.ability[0] === "any" ? "intelligence" : row.ability[0], category: row.type } })),
     ...talents.map(row => ({ ...base(row, "talent"), system: { ...base(row, "talent").system, constellation: row.constellation, parentId: row.parent || "", effects: row.effect ? [row.effect] : [], requirements: row.requires || [] } })),
-    ...gear.map(row => { const magazine = Number((row.special || []).join(" ").match(/Mag\s+(\d+)/i)?.[1] || 0); return ({ ...base(row, row.kind === "drone" ? "gear" : row.kind), system: { ...base(row, row.kind === "drone" ? "gear" : row.kind).system, techEra: row.techEra, itemClass: row.class, restriction: row.restriction, mass: row.mass || 0, weaponType: row.type || "", range: row.range || "", speed: row.speed || 0, damage: row.damage || "", damageType: row.damageType || "", special: row.special || [], ammo: { value: magazine, max: magazine }, move: row.move || 0, penalty: row.penalty || 0, physical: row.physical || 0, energy: row.energy || 0 } }); }),
+    ...gear.map(row => ({ ...base(row, row.kind === "drone" ? "gear" : row.kind), system: { ...base(row, row.kind === "drone" ? "gear" : row.kind).system, techEra: row.techEra, itemClass: row.class, restriction: row.restriction, mass: row.mass || 0, weaponType: row.type || "", range: row.range || "", speed: row.speed || 0, damage: row.damage || "", damageType: row.damageType || "", special: row.special || [], ammo: weaponAmmoProfile(row), move: row.move || 0, penalty: row.penalty || 0, physical: row.physical || 0, energy: row.energy || 0 } })),
     ...upgrades.map(row => ({ ...base(row, "upgrade"), system: { ...base(row, "upgrade").system, itemClass: row.classIncrease, effects: row.effect ? [row.effect] : [], requirements: row.requires ? [row.requires] : [] } })),
     ...species.map(row => ({ ...base(row, "species"), system: { ...base(row, "species").system, effects: row.effects || [], requirements: row.requirements || [] } })),
     ...archetypes.map(row => ({ ...base(row, "archetype"), system: { ...base(row, "archetype").system, effects: row.effects || [], metadata: row } })),
@@ -67,7 +68,8 @@ export async function refreshActorSources(actor) {
   for (const item of actor.items) {
     const source = sources.get(`${item.type}:${item.system.sourceId}`);
     if (!source) continue;
-    const state = { ranks: item.system.ranks, keyAbility: item.system.keyAbility, quantity: item.system.quantity, equipped: item.system.equipped, upgrades: item.system.upgrades, ammo: item.system.ammo };
+    const sourceAmmo = source.system.ammo || {}, oldAmmo = item.system.ammo || {}, ammo = item.type === "weapon" ? { ...sourceAmmo, value: Number(oldAmmo.max || 0) > 0 ? Math.min(sourceAmmo.max, Number(oldAmmo.value || 0)) : sourceAmmo.max, reserve: Number(oldAmmo.reserve || sourceAmmo.reserve || 0), payload: oldAmmo.payload || sourceAmmo.payload, specialType: oldAmmo.specialType || "normal", specialAvailable: Boolean(oldAmmo.specialAvailable), specialUsed: Boolean(oldAmmo.specialUsed), speedLoader: Boolean(oldAmmo.speedLoader) } : oldAmmo;
+    const state = { ranks: item.system.ranks, keyAbility: item.system.keyAbility, quantity: item.system.quantity, equipped: item.system.equipped, upgrades: item.system.upgrades, ammo };
     updates.push(foundry.utils.mergeObject(source, { _id: item.id, system: state }, { inplace: false, recursive: true }));
   }
   if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
