@@ -1,5 +1,6 @@
 import { damageSeverity, durability, applyWound, woundPenalty, parseDamage, skillTarget, stepFormula, rollDegree } from "./rules.mjs";
 import { species, archetypes } from "./catalogs.mjs";
+import { calculateEncumbrance } from "./inventory.mjs";
 
 export class AlternityActor extends Actor {
   prepareDerivedData() {
@@ -8,22 +9,32 @@ export class AlternityActor extends Actor {
     const talentBoxes = {};
     for (const item of items.filter(i => i.type === "talent")) for (const effect of item.system.effects || []) if (effect.type === "woundBoxes") for (const row of effect.rows || []) talentBoxes[row] = (talentBoxes[row] || 0) + Number(effect.value || 0);
     const effectiveVitality = s.abilities.vitality + this.ruleEffects.filter(effect => effect.type === "ability" && effect.ability === "vitality" || effect.type === "effectiveVitality" && effect.purpose === "durability").reduce((sum, effect) => sum + Number(effect.value || 0), 0);
+    const load = this.encumbranceState;
     s.derived = {
       durability: durability(effectiveVitality, talentBoxes), woundPenalty: woundPenalty(s.wounds), incapacitated: s.wounds.mortal > 0 || s.play.statuses.includes("incapacitated"),
       initiative: { target: 20 - s.abilities.agility - s.abilities.focus, steps: this._effectTotal("initiativeStep") },
-      armor: this.armorResistance, speed: this.currentSpeed, mass: items.reduce((n, i) => n + Number(i.system.mass || 0) * Number(i.system.quantity || 1), 0)
+      armor: this.armorResistance, speed: this.currentSpeed, mass: load.mass, load
     };
   }
   get ruleEffects() { return [...(species.find(row => row.id === this.system.speciesId)?.effects || []), ...(archetypes.find(row => row.id === this.system.archetypeId)?.effects || []), ...Array.from(this.items).flatMap(item => item.system.effects || [])]; }
   _effectTotal(type) { return this.ruleEffects.filter(effect => effect.type === type).reduce((sum, effect) => sum + Number(effect.value || 0), 0); }
-  get armorResistance() { const armor = this.items.filter(i => i.type === "armor" && i.system.equipped), natural = this.ruleEffects.filter(e => e.type === "armor"); return { physical: armor.reduce((n, i) => n + Number(i.system.physical || 0), 0) + natural.reduce((n, e) => n + Number(e.physical || 0), 0), energy: armor.reduce((n, i) => n + Number(i.system.energy || 0), 0) + natural.reduce((n, e) => n + Number(e.energy || 0), 0) }; }
-  get currentSpeed() { const statuses = this.system.play.statuses; if (this.system.wounds.mortal || statuses.includes("incapacitated")) return 0; if (statuses.includes("prone")) return 2; const base = Number(this.ruleEffects.filter(e => e.type === "baseSpeedOverride").at(-1)?.value ?? 20) + this._effectTotal("speed"); return statuses.some(x => ["blinded", "impaired", "slowed"].includes(x)) ? Math.max(2, base / 2) : base; }
+  effectiveAbility(id) { return Number(this.system.abilities[id] || 0) + this.ruleEffects.filter(effect => effect.type === "ability" && effect.ability === id).reduce((sum, effect) => sum + Number(effect.value || 0), 0); }
+  get equippedArmor() { return this.items.filter(item => item.type === "armor" && item.system.equipped); }
+  get armorSuit() { return this.equippedArmor.find(item => !(item.system.special || []).some(value => /^(screen|cover|deflect|bonus resistance)/i.test(value))); }
+  get armorBonuses() { return this.equippedArmor.filter(item => (item.system.special || []).some(value => /^bonus resistance/i.test(value))); }
+  get armorResistance() { const sources = [this.armorSuit, ...this.armorBonuses].filter(Boolean), natural = this.ruleEffects.filter(e => e.type === "armor"); return { physical: sources.reduce((n, i) => n + Number(i.system.physical || 0), 0) + natural.reduce((n, e) => n + Number(e.physical || 0), 0), energy: sources.reduce((n, i) => n + Number(i.system.energy || 0), 0) + natural.reduce((n, e) => n + Number(e.energy || 0), 0) }; }
+  get armorPenalties() { const armor = this.armorSuit, ranks = Number(this.getSkill("armor-training")?.system.ranks || 0), moveReduction = ranks >= 8 ? 6 : ranks >= 5 ? 4 : ranks >= 2 ? 2 : 0, checkReduction = ranks >= 7 ? 3 : ranks >= 4 ? 2 : ranks >= 1 ? 1 : 0; return { move: Math.min(0, Number(armor?.system.move || 0) + moveReduction), check: Math.min(0, Number(armor?.system.penalty || 0) + checkReduction) }; }
+  get encumbranceState() {
+    const mass = this.items.reduce((sum, item) => sum + Number(item.system.mass || 0) * Math.max(0, Number(item.system.quantity ?? 1)), 0);
+    return calculateEncumbrance({ mass, strength: this.effectiveAbility("strength"), vitality: this.effectiveAbility("vitality"), tierReduction: this._effectTotal("encumbranceTierReduction") });
+  }
+  get currentSpeed() { const statuses = this.system.play.statuses, load = this.encumbranceState; if (this.system.wounds.mortal || statuses.includes("incapacitated") || load.overloaded) return 0; if (statuses.includes("prone")) return 2; const base = Number(this.ruleEffects.filter(e => e.type === "baseSpeedOverride").at(-1)?.value ?? 20) + this._effectTotal("speed"), adjusted = Math.max(0, base + this.armorPenalties.move + load.speedPenalty); return statuses.some(x => ["blinded", "impaired", "slowed"].includes(x)) ? Math.max(2, adjusted / 2) : adjusted; }
   get statusSteps() { const statuses = this.system.play.statuses; return statuses.includes("impaired") ? -2 : statuses.includes("weakened") || statuses.includes("grappled") ? -1 : 0; }
   getSkill(id) { return this.items.find(i => i.type === "skill" && i.system.sourceId === id); }
   async rollSkill(itemOrId, { steps = 0, label } = {}) {
     const item = typeof itemOrId === "string" ? this.getSkill(itemOrId) : itemOrId, ability = this.system.abilities[item?.system.keyAbility] || 0, ranks = item?.system.ranks || 0;
-    const categorySteps = this.ruleEffects.filter(effect => effect.type === "categoryStep" && effect.category === item?.system.category && ranks > 0).reduce((sum, effect) => sum + Number(effect.value || 0), 0), directSteps = this.ruleEffects.filter(effect => effect.type === "checkStep" && effect.skill === item?.system.sourceId).reduce((sum, effect) => sum + Number(effect.value || 0), 0);
-    const target = skillTarget(ability, ranks), finalSteps = Number(steps) + categorySteps + directSteps + this.system.derived.woundPenalty + this.statusSteps, die = await new Roll(stepFormula(finalSteps)).evaluate();
+    const categorySteps = this.ruleEffects.filter(effect => effect.type === "categoryStep" && effect.category === item?.system.category && ranks > 0).reduce((sum, effect) => sum + Number(effect.value || 0), 0), directSteps = this.ruleEffects.filter(effect => effect.type === "checkStep" && effect.skill === item?.system.sourceId).reduce((sum, effect) => sum + Number(effect.value || 0), 0), encumbranceSteps = ["attack", "defensive", "environmental"].includes(item?.system.category) ? this.encumbranceState.checkSteps : 0;
+    const target = skillTarget(ability, ranks), finalSteps = Number(steps) + categorySteps + directSteps + encumbranceSteps + this.armorPenalties.check + this.system.derived.woundPenalty + this.statusSteps, die = await new Roll(stepFormula(finalSteps)).evaluate();
     const degree = rollDegree(die.total, target);
     await die.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this }), flavor: `<strong>${label || item?.name || "Skill Check"}</strong><br>Target ${target}; ${finalSteps >= 0 ? "+" : ""}${finalSteps} steps<br><b>${degree}</b>` });
     if (this.system.play.statuses.includes("off-balance")) await this.update({ "system.play.statuses": this.system.play.statuses.filter(status => status !== "off-balance") });

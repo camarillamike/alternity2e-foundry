@@ -2,7 +2,17 @@
 
 > Private campaign repository. This package includes material derived from a lawfully owned rulebook and is not licensed for public redistribution.
 
-Version 0.3.0 replaces the prototype impulse counter with a rulebook action scheduler:
+Version 0.3.1 adds inventory integrity and full encumbrance handling to the rulebook action scheduler:
+
+- Compendium drops use one capture-phase handler and cannot multiply after sheet rerenders.
+- Repeated source Items increase quantity; unique skills and talents cannot duplicate.
+- **Consolidate duplicate Items** repairs Actors affected by the prior drop bug.
+- Weapons appear in both Attacks and Items and can be equipped, edited, or removed from either workflow.
+- Carried mass, encumbrance capacity, load categories, Speed reductions, relevant skill penalties, armor movement/check penalties, Armor Training, and Baromorph load reduction are derived automatically.
+- Only one armor suit contributes resistance, alongside natural armor and legitimate bonus-resistance equipment.
+- Wound boxes render horizontally in compact severity rows.
+
+Version 0.3.0 replaced the prototype impulse counter with a rulebook action scheduler:
 
 - Absolute impulse timing preserves actions across round boundaries (for example, Impulse 7 plus a 3-impulse action becomes next round, Impulse 2).
 - Initiative success levels schedule first actions correctly; failures begin in Impulse 2.
