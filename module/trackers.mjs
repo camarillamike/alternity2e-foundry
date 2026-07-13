@@ -60,6 +60,11 @@ export function coverSteps(percent = 0, { soft = false } = {}) {
   return { total: false, steps };
 }
 
+export function attackDefenseSteps({ cover = 0, deviceCover = 0, evade = 0, totalDefense = 0, deflect = 0 } = {}) {
+  const positionalDefense = Math.min(0, Number(cover || 0), Number(deviceCover || 0), Number(evade || 0));
+  return positionalDefense + Math.min(0, Number(totalDefense || 0)) + Number(deflect || 0);
+}
+
 export function attitudeAfter(attitude, degree, worsenOnFailure = false) {
   const index = Math.max(0, ATTITUDES.indexOf(attitude));
   if (degree === "Failure") return ATTITUDES[Math.max(0, index - (worsenOnFailure ? 1 : 0))];

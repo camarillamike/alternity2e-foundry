@@ -81,10 +81,14 @@ export class AlternityCombat extends Combat {
   async setModifier(combatant, modifier) { if (!requireAuthority(controlsActor(combatant?.actor), `You do not control ${combatant?.name || "that combatant"}.`)) return; if (!this.isReady(combatant)) return ui.notifications.warn(`${combatant?.name || "Combatant"} is not ready to act.`); if (modifier.id === "evade" && Number(flag(combatant, "defenseUntilTick", 0)) > this.currentTick) return ui.notifications.warn("Evade cannot be combined with Total Defense."); if (modifier.id === "evade") { const ranks = Number(combatant.actor?.getSkill?.("dodge")?.system.ranks || 0); modifier = { ...modifier, defensePenalty: ranks >= 10 ? -3 : ranks >= 5 ? -2 : -1 }; } await combatant.update({ "flags.alternity2e.pendingModifier": modifier }); ui.notifications.info(`${combatant.name}: ${modifier.label} selected for the next applicable action.`); }
   async markSurprised(combatant) { if (!requireAuthority(game.user.isGM, "Only the GM can assign tactical surprise.")) return; if (this.round > 1 || this.impulse > 1 || flag(combatant, "acted", false)) return ui.notifications.warn("Tactical surprise must be assigned before this combatant's first action."); await combatant.update({ initiative: 0, "flags.alternity2e.initiativeDegree": "Surprised", "flags.alternity2e.initiativeRoll": 0, "flags.alternity2e.initiativePriority": 0, "flags.alternity2e.nextTick": 2 }); await this.initializeSchedules(); ui.combat?.render(); }
   getModifier(actor, kind) { const combatant = this.combatantForActor(actor), modifier = combatant ? flag(combatant, "pendingModifier", null) : null; return modifier && (!modifier.kind || modifier.kind === kind) ? modifier : null; }
-  targetDefenseModifier(actor) {
-    const combatant = this.combatantForActor(actor); if (!combatant) return 0;
-    let value = 0; if (Number(flag(combatant, "defenseUntilTick", 0)) > this.currentTick) value -= 2; if (Number(flag(combatant, "evadeUntilTick", 0)) > this.currentTick) value += Number(flag(combatant, "evadePenalty", -1)); return value;
+  targetDefenseState(actor) {
+    const combatant = this.combatantForActor(actor); if (!combatant) return { totalDefense: 0, evade: 0 };
+    return {
+      totalDefense: Number(flag(combatant, "defenseUntilTick", 0)) > this.currentTick ? -2 : 0,
+      evade: Number(flag(combatant, "evadeUntilTick", 0)) > this.currentTick ? Number(flag(combatant, "evadePenalty", -1)) : 0
+    };
   }
+  targetDefenseModifier(actor) { const state = this.targetDefenseState(actor); return Number(state?.totalDefense || 0) + Number(state?.evade || 0); }
   resistanceModifier(actor) { const combatant = this.combatantForActor(actor); return combatant && Number(flag(combatant, "defenseUntilTick", 0)) > this.currentTick ? 2 : 0; }
   async advanceImpulse({ skipEmpty = false } = {}) {
     if (!requireAuthority(canAdvanceWorldClock(), "Only the GM can advance the encounter clock.")) return this;
