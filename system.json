@@ -2,22 +2,19 @@
   "id": "alternity2e",
   "title": "Alternity 2e (Private System)",
   "description": "A private-use Foundry VTT implementation of Alternity 2e with character creation, rolls, wounds, armor, talents, gear, and impulse combat support.",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "compatibility": { "minimum": 13, "verified": 14 },
   "authors": [{ "name": "Private campaign system" }],
   "esmodules": ["alternity2e.mjs"],
-  "styles": ["styles/alternity2e.css", "styles/combat.css", "styles/inventory.css", "styles/ammunition.css", "styles/audit-expansion.css"],
+  "styles": ["styles/alternity2e.css", "styles/combat.css", "styles/inventory.css", "styles/ammunition.css", "styles/audit-expansion.css", "styles/future-expansions.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "documentTypes": {
-    "Actor": { "hero": {}, "npc": {}, "creature": {}, "drone": {}, "vehicle": {} },
-    "Item": { "skill": {}, "talent": {}, "weapon": {}, "armor": {}, "tool": {}, "gear": {}, "upgrade": {}, "species": {}, "archetype": {}, "condition": {} }
+    "Actor": { "hero": {}, "npc": {}, "creature": {}, "drone": {}, "vehicle": {}, "starship": {} },
+    "Item": { "skill": {}, "talent": {}, "weapon": {}, "armor": {}, "tool": {}, "gear": {}, "upgrade": {}, "species": {}, "archetype": {}, "condition": {}, "reference": {} }
   },
   "initiative": "1d20",
   "grid": { "distance": 2, "units": "m" },
   "primaryTokenAttribute": "wounds.mortal",
   "secondaryTokenAttribute": "heroPoints",
-  "socket": true,
-  "url": "https://github.com/camarillamike/alternity2e-foundry",
-  "manifest": "https://raw.githubusercontent.com/camarillamike/alternity2e-foundry/main/system.json",
-  "download": "https://github.com/camarillamike/alternity2e-foundry/releases/download/v0.5.1/alternity2e-foundry-v0.5.1.zip"
+  "socket": true
 }

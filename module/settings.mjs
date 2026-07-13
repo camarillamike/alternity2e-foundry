@@ -1,3 +1,5 @@
+import { AlternityGMDashboard } from "./gm-dashboard.mjs";
+
 export function registerSettings() {
   game.settings.register("alternity2e", "installPrivateCatalogs", { name: "Install Core Rulebook compendiums", hint: "Builds categorized world compendiums from the bundled personal-use rulebook catalog when the world opens.", scope: "world", config: true, type: Boolean, default: true });
   game.settings.register("alternity2e", "lethality", { name: "Lethality", scope: "world", config: true, type: String, choices: { low: "Low", standard: "Standard", high: "High" }, default: "standard" });
@@ -8,5 +10,9 @@ export function registerSettings() {
   game.settings.register("alternity2e", "npcRollMode", { name: "NPC roll visibility", scope: "world", config: true, type: String, choices: { publicroll: "Public", gmroll: "Private GM roll", blindroll: "Blind GM roll" }, default: "gmroll" });
   game.settings.register("alternity2e", "heroicMode", { name: "Hero Point campaign mode", scope: "world", config: true, type: String, choices: { standard: "Standard (1 at adventure start)", high: "High heroic (5 at adventure start)" }, default: "standard" });
   game.settings.register("alternity2e", "tacticalAutomation", { name: "Tactical automation", hint: "Automatic mode measures token range and applies structured cover and size modifiers when present.", scope: "world", config: true, type: String, choices: { assisted: "Assisted (recommended)", automatic: "Automatic", manual: "Manual" }, default: "assisted" });
+  game.settings.register("alternity2e", "situationalAutomation", { name: "Situational talent and gear automation", hint: "Prompt keeps context-dependent bonuses visible without assuming fictional circumstances. Automatic applies supported unambiguous effects; Manual leaves them to the table.", scope: "world", config: true, type: String, choices: { prompt: "Prompt/assisted (recommended)", automatic: "Automatic", manual: "Manual" }, default: "prompt" });
+  game.settings.register("alternity2e", "defaultTechEra", { name: "Default campaign Tech Era", scope: "world", config: true, type: Number, default: 7, range: { min: 1, max: 9, step: 1 } });
+  game.settings.register("alternity2e", "activeCampaignPreset", { scope: "world", config: false, type: String, default: "core" });
   game.settings.register("alternity2e", "catalogVersion", { scope: "world", config: false, type: String, default: "" });
+  game.settings.registerMenu("alternity2e", "gmDashboard", { name: "GM configuration dashboard", label: "Open dashboard", hint: "Apply a campaign preset and rebuild the complete Core catalog.", icon: "fas fa-sliders", type: AlternityGMDashboard, restricted: true });
 }

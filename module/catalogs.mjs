@@ -4,9 +4,11 @@ import { species } from "../data/species.js";
 import { archetypes } from "../data/archetypes.js";
 import { talents } from "../data/talents.js";
 import { gear, upgrades } from "../data/gear.js";
+import { adversaryTemplates } from "../data/adversaries.js";
 import { weaponAmmoProfile } from "./ammunition.mjs";
+import { refreshActorCompendiums } from "./craft-catalogs.mjs";
 
-const VERSION = "0.5.1";
+const VERSION = "0.6.0";
 const html = value => String(value || "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 const base = (row, type) => ({ name: row.name, type, system: { sourceId: row.id, description: html(row.description || row.notes || ""), page: row.page || 0, metadata: row } });
 const conditions = [
@@ -28,13 +30,14 @@ export function catalogDocuments() {
     ...upgrades.map(row => ({ ...base(row, "upgrade"), system: { ...base(row, "upgrade").system, itemClass: row.classIncrease, effects: row.effect ? [row.effect] : [], requirements: row.requires ? [row.requires] : [] } })),
     ...species.map(row => ({ ...base(row, "species"), system: { ...base(row, "species").system, effects: row.effects || [], requirements: row.requirements || [] } })),
     ...archetypes.map(row => ({ ...base(row, "archetype"), system: { ...base(row, "archetype").system, effects: row.effects || [], metadata: row } })),
+    ...adversaryTemplates.map(row => ({ ...base(row, "reference"), system: { ...base(row, "reference").system, category: "Adversary Templates", metadata: row } })),
     ...conditions.map(row => base(row, "condition"))
   ];
 }
 
 export async function installPrivateCatalogs() {
   if (!game.user.isGM || game.settings.get("alternity2e", "catalogVersion") === VERSION) return;
-  await refreshCompendiums();
+  await refreshCompendiums(); await refreshActorCompendiums();
   await game.settings.set("alternity2e", "catalogVersion", VERSION);
   ui.notifications.info("Alternity 2e compendiums installed or updated from the bundled rulebook data.");
 }
@@ -42,7 +45,7 @@ export async function installPrivateCatalogs() {
 const PACKS = {
   species: ["Species", ["species"]], archetypes: ["Archetypes", ["archetype"]], skills: ["Skills", ["skill"]],
   talents: ["Talent Constellations", ["talent"]], weapons: ["Weapons", ["weapon"]], armor: ["Armor", ["armor"]],
-  tools: ["Tools and Equipment", ["tool", "gear"]], upgrades: ["Gear Upgrades and Ammunition", ["upgrade"]], conditions: ["Conditions", ["condition"]]
+  tools: ["Tools and Equipment", ["tool", "gear"]], upgrades: ["Gear Upgrades, Custom Features, and Ammunition", ["upgrade"]], adversaries: ["Adversary Templates", ["reference"]], conditions: ["Conditions", ["condition"]]
 };
 
 export async function refreshCompendiums() {
@@ -69,7 +72,7 @@ export async function refreshActorSources(actor) {
     const source = sources.get(`${item.type}:${item.system.sourceId}`);
     if (!source) continue;
     const sourceAmmo = source.system.ammo || {}, oldAmmo = item.system.ammo || {}, ammo = item.type === "weapon" ? { ...sourceAmmo, value: Number(oldAmmo.max || 0) > 0 ? Math.min(sourceAmmo.max, Number(oldAmmo.value || 0)) : sourceAmmo.max, reserve: Number(oldAmmo.reserve || sourceAmmo.reserve || 0), payload: oldAmmo.payload || sourceAmmo.payload, specialType: oldAmmo.specialType || "normal", specialAvailable: Boolean(oldAmmo.specialAvailable), specialUsed: Boolean(oldAmmo.specialUsed), speedLoader: Boolean(oldAmmo.speedLoader) } : oldAmmo;
-    const state = { ranks: item.system.ranks, keyAbility: item.system.keyAbility, quantity: item.system.quantity, equipped: item.system.equipped, upgrades: item.system.upgrades, ammo };
+    const state = { ranks: item.system.ranks, keyAbility: item.system.keyAbility, quantity: item.system.quantity, equipped: item.system.equipped, upgrades: item.system.upgrades, featureStates: item.system.featureStates, effects: item.system.effects, special: item.system.special, itemClass: item.system.itemClass, speed: item.system.speed, damageType: item.system.damageType, physical: item.system.physical, energy: item.system.energy, move: item.system.move, penalty: item.system.penalty, ammo };
     updates.push(foundry.utils.mergeObject(source, { _id: item.id, system: state }, { inplace: false, recursive: true }));
   }
   if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);

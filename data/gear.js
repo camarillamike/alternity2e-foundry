@@ -1,4 +1,5 @@
 import {gearDescriptions} from './gear-descriptions.js';
+import {weaponCustomizations} from './customizations.js';
 const weapon=(id,name,techEra,itemClass,type,range,speed,damage,damageType,special=[],mass=0,restriction='G')=>({id,name,kind:'weapon',category:'weapon',techEra,class:itemClass,restriction,type,range,speed,damage,damageType,special,mass,page:107});
 const armor=(id,name,techEra,itemClass,move,penalty,physical,energy,special=[],mass=0,restriction='G')=>({id,name,kind:'armor',techEra,class:itemClass,restriction,move,penalty,physical,energy,special,mass,page:118});
 const tool=(id,name,techEra,itemClass,keySkill,mass=0,restriction='G')=>({id,name,kind:'tool',techEra,class:itemClass,restriction,keySkill,mass,page:124});
@@ -125,6 +126,7 @@ export const upgrades=[
  upgrade('wound-amelioration','Wound Amelioration','armor',1,{te:7,requires:{poweredOrLifeSupport:true},effect:{ignoreBleed:true,woundPenalty:1}}),
  upgrade('fast','Fast','tool',1,{effect:{laterCheckImpulses:-1}}), upgrade('high-quality','High Quality','tool',1,{effect:{skillSteps:1}}),
  upgrade('automated','Automated','tool',2,{effect:{automated:true,unguidedSteps:-1}}), upgrade('superior-quality','Superior Quality','tool',2,{effect:{skillSteps:2}})
+ , ...weaponCustomizations
 ];
 
 export const specialQualityRules={
@@ -147,7 +149,7 @@ const summaries={
  'wound-amelioration':'Ignore Bleed and reduce wound penalties by 1 step.', 'fast':'After the first skill-challenge check, later checks require 1 fewer impulse.',
  'high-quality':'+1 step on checks using the tool.', 'automated':'Can operate independently at a -1 step penalty.', 'superior-quality':'+2 steps on checks using the tool.'
 };
-for(const up of upgrades)up.summary=summaries[up.id];
+for(const up of upgrades)if(summaries[up.id])up.summary=summaries[up.id];
 const primitive=new Set(['bolas','javelin','sling','bow','crossbow']);
 const firearms=new Set(['flintlock-musket','flintlock-pistol','revolver','bolt-action-rifle','shotgun','light-pistol','heavy-pistol','assault-rifle','sniper-rifle','smg','flechette-pistol','flechette-gun','razor-pistol']);
 const energy=new Set(['taser','laser-pistol','laser-rifle','sonic-bore','plasma-pistol','plasma-rifle','phase-pistol','phase-rifle','disintegrator']);

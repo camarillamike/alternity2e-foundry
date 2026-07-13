@@ -2,6 +2,10 @@
 
 > Private campaign repository. This package includes material derived from a lawfully owned rulebook and is not licensed for public redistribution.
 
+Version 0.6.0 adds all 16 free weapon custom features, linked shared-ammunition resources, assisted talent actions, a responsive searchable catalog, GM campaign presets, six drone Actor templates, five sample vehicles, three Core sample ships, all 49 adversary role/level references, and automated integration-contract coverage.
+
+The sample starships are intentionally modeled as campaign resources and sets. The Core Rulebook assigns full ship construction and ship-to-ship combat to the separate *Shipyard* sourcebook, so this package does not invent those missing rules.
+
 Version 0.5.1 completes the GM play-surface expansion with exported encounter audit logs and explicit per-action movement allowances. Version 0.5.0 introduced the broader rules expansion:
 
 - World policies now separate GM-only clocks, damage approval, build/advancement control, NPC secrets, and challenge outcomes from player-owned rolls, Hero Point spending, reactions, and inventory use.

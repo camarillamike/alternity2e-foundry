@@ -1,6 +1,6 @@
 import { weaponAmmoProfile } from "./ammunition.mjs";
 
-export const ACTOR_SCHEMA_VERSION = 6;
+export const ACTOR_SCHEMA_VERSION = 7;
 
 export async function migrateActorV5(actor) {
   if (!actor || Number(actor.system.schemaVersion || 1) >= ACTOR_SCHEMA_VERSION) return 0;
@@ -13,6 +13,7 @@ export async function migrateActorV5(actor) {
     "system.build.talentChoicesAvailable": 0
     , "system.build.retrainingAvailable": 0, "system.build.talentRetrainingAvailable": false,
     "system.play.scene": Number(actor.system.play?.scene || 1)
+    , "system.starship": actor.system.starship || { sourceId: "", techEra: 0, hull: "", drive: "", modules: "", features: "", resources: [], crewStations: [], notes: "" }
   };
   await actor.update(update);
   return 1;
@@ -33,7 +34,9 @@ export function exportItemState(item) {
     quantity: Number(item.system.quantity ?? 1),
     equipped: Boolean(item.system.equipped),
     upgrades: [...(item.system.upgrades || [])],
+    featureStates: foundry.utils.deepClone(item.system.featureStates || {}),
     ammo: foundry.utils.deepClone(item.system.ammo || weaponAmmoProfile({})),
+    ammoResourceName: item.system.ammo?.resourceId ? item.parent?.items?.get(item.system.ammo.resourceId)?.name || "" : "",
     custom: item.system.sourceId ? null : item.toObject()
   };
 }
