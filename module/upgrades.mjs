@@ -1,3 +1,9 @@
+import { gear, upgrades as upgradeCatalog } from "../data/gear.js";
+import { weaponAmmoProfile } from "./ammunition.mjs";
+
+const UNDERBARREL = "Under-barrel grenade launcher: Mag 1, Reload 2";
+const upgradeRow = value => value?.system?.metadata || upgradeCatalog.find(row => row.id === value);
+
 export function upgradeEligibleFor(item, upgrade) {
   const row = upgrade?.system?.metadata || upgrade, target = row.target || upgrade?.system?.metadata?.target;
   if (!item || !upgrade || target !== item.type || (item.system.upgrades || []).includes(upgrade.system?.sourceId || row.id)) return false;
@@ -31,14 +37,17 @@ export function upgradeEligibleFor(item, upgrade) {
 
 export async function installUpgrade(item, upgrade) {
   if (!upgradeEligibleFor(item, upgrade)) throw new Error(`${upgrade?.name || "Upgrade"} is not eligible for ${item?.name || "that item"}.`);
-  const row = upgrade.system.metadata, effect = row.effect || {}, special = [...(item.system.special || [])], effects = [...(item.system.effects || [])], update = {
+  const row = upgrade.system.metadata, effect = row.effect || {}, special = [...(item.system.special || [])], effects = [...(item.system.effects || [])], metadata = { ...(item.system.metadata || {}) }, upgradeInstallState = { ...(metadata.upgradeInstallState || {}) };
+  upgradeInstallState[upgrade.system.sourceId] = { specialAdded: Boolean(effect.addSpecial && !special.includes(effect.addSpecial)), replacedSpecial: Boolean(effect.replaceSpecial && special.includes(effect.replaceSpecial)), underbarrelAdded: Boolean(effect.underbarrelLauncher && !special.includes(UNDERBARREL)) }; metadata.upgradeInstallState = upgradeInstallState;
+  const update = {
     "system.upgrades": [...(item.system.upgrades || []), upgrade.system.sourceId],
-    "system.itemClass": Number(item.system.itemClass || 0) + Number(row.classIncrease || upgrade.system.itemClass || 0)
+    "system.itemClass": Number(item.system.itemClass || 0) + Number(row.classIncrease || upgrade.system.itemClass || 0),
+    "system.metadata": metadata
   };
   if (effect.addSpecial && !special.includes(effect.addSpecial)) special.push(effect.addSpecial);
   if (effect.replaceSpecial) { const index = special.findIndex(value => value === effect.replaceSpecial); if (index >= 0) special.splice(index, 1); if (effect.addSpecial && !special.includes(effect.addSpecial)) special.push(effect.addSpecial); }
   if (effect.magazineMultiplier) { const oldMax = Number(item.system.ammo?.max || 0), nextMax = Math.ceil(oldMax * Number(effect.magazineMultiplier)); update["system.ammo.max"] = nextMax; update["system.ammo.value"] = Math.min(nextMax, Number(item.system.ammo?.value || 0) + nextMax - oldMax); }
-  if (effect.underbarrelLauncher) special.push("Under-barrel grenade launcher: Mag 1, Reload 2");
+  if (effect.underbarrelLauncher && !special.includes(UNDERBARREL)) special.push(UNDERBARREL);
   if (effect.aimRangeSteps) effects.push({ type: "aimRangeSteps", value: Number(effect.aimRangeSteps), source: upgrade.system.sourceId });
   if (effect.laserSight) effects.push({ type: "laserSight", value: 1, source: upgrade.system.sourceId });
   if (effect.situational) effects.push({ type: "situational", context: effect.situational, value: Number(effect.steps || effect.coercionSteps || effect.armorPenetration || 0), source: upgrade.system.sourceId });
@@ -53,5 +62,37 @@ export async function installUpgrade(item, upgrade) {
   if (effect.reduceAP) effects.push({ type: "reduceAP", value: Number(effect.reduceAP), source: upgrade.system.sourceId });
   if (effect.woundPenalty) effects.push({ type: "woundPenaltyReduction", value: Number(effect.woundPenalty), source: upgrade.system.sourceId });
   update["system.special"] = special; update["system.effects"] = effects;
+  await item.update(update); return item;
+}
+
+export function installedUpgradeDetails(item) {
+  return (item?.system?.upgrades || []).map(id => { const row = upgradeRow(id); return { id, name: row?.name || id, description: row?.summary || row?.description || "Installed upgrade" }; });
+}
+
+export async function uninstallUpgrade(item, upgradeId) {
+  const installed = item?.system?.upgrades || [];
+  if (!item || !installed.includes(upgradeId)) throw new Error(`${upgradeId || "That upgrade"} is not installed on ${item?.name || "that item"}.`);
+  const row = upgradeRow(upgradeId), effect = row?.effect || {}, remaining = installed.filter(id => id !== upgradeId), remainingRows = remaining.map(upgradeRow).filter(Boolean), base = gear.find(entry => entry.id === item.system.sourceId), baseSpecial = new Set(base?.special || []), metadata = { ...(item.system.metadata || {}) }, installStates = { ...(metadata.upgradeInstallState || {}) }, installState = installStates[upgradeId];
+  const suppliedByRemainingUpgrade = value => remainingRows.some(entry => entry.effect?.addSpecial === value || value === UNDERBARREL && entry.effect?.underbarrelLauncher);
+  const special = [...(item.system.special || [])];
+  const removeSpecial = value => { if (!value || baseSpecial.has(value) || suppliedByRemainingUpgrade(value)) return; for (let index = special.length - 1; index >= 0; index--) if (special[index] === value) special.splice(index, 1); };
+  if (!installState || installState.specialAdded) removeSpecial(effect.addSpecial); if (effect.underbarrelLauncher && (!installState || installState.underbarrelAdded)) removeSpecial(UNDERBARREL);
+  if (effect.replaceSpecial) { if (!installState || installState.specialAdded) removeSpecial(effect.addSpecial); if ((installState?.replacedSpecial || !installState && (baseSpecial.has(effect.replaceSpecial) || suppliedByRemainingUpgrade(effect.replaceSpecial))) && !special.includes(effect.replaceSpecial)) special.push(effect.replaceSpecial); }
+  delete installStates[upgradeId]; metadata.upgradeInstallState = installStates;
+  const update = {
+    "system.upgrades": remaining,
+    "system.itemClass": Math.max(0, Number(item.system.itemClass || 0) - Number(row?.classIncrease || 0)),
+    "system.special": special,
+    "system.effects": (item.system.effects || []).filter(entry => entry.source !== upgradeId),
+    "system.metadata": metadata
+  };
+  if (effect.speed) update["system.speed"] = Math.max(1, Number(item.system.speed || 0) - Number(effect.speed));
+  for (const key of ["move", "penalty", "physical", "energy"]) if (effect[key]) update[`system.${key}`] = Number(item.system[key] || 0) - Number(effect[key]);
+  if (effect.magazineMultiplier) {
+    const baseMax = base ? Number(weaponAmmoProfile(base).max || 0) : Math.max(0, Math.round(Number(item.system.ammo?.max || 0) / Number(effect.magazineMultiplier)));
+    const remainingMultiplier = remainingRows.reduce((value, entry) => value * Number(entry.effect?.magazineMultiplier || 1), 1), nextMax = Math.ceil(baseMax * remainingMultiplier);
+    update["system.ammo.max"] = nextMax; update["system.ammo.value"] = Math.min(nextMax, Number(item.system.ammo?.value || 0));
+  }
+  if (effect.toggle) { const featureStates = { ...(item.system.featureStates || {}) }; delete featureStates[effect.toggle]; update["system.featureStates"] = featureStates; }
   await item.update(update); return item;
 }

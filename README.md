@@ -2,6 +2,8 @@
 
 > Private campaign repository. This package includes material derived from a lawfully owned rulebook and is not licensed for public redistribution.
 
+Version 0.6.2 adds confirmed upgrade uninstallation. Installed upgrades are shown by name on their parent item and can be removed without deleting the item; class changes, numeric benefits, added qualities, sourced effects, magazine changes, and feature toggles are reversed while other upgrades remain intact.
+
 Version 0.6.1 corrects defensive attack modifiers so Evade competes with cover while Total Defense stacks separately, binds ordinary damage buttons to the token originally attacked, and presents each direct attack as one target-specific chat card with its roll, target, success level, damage expression, and application control.
 
 Version 0.6.0 adds all 16 free weapon custom features, linked shared-ammunition resources, assisted talent actions, a responsive searchable catalog, GM campaign presets, six drone Actor templates, five sample vehicles, three Core sample ships, all 49 adversary role/level references, and automated integration-contract coverage.

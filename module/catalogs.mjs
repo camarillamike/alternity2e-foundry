@@ -8,7 +8,7 @@ import { adversaryTemplates } from "../data/adversaries.js";
 import { weaponAmmoProfile } from "./ammunition.mjs";
 import { refreshActorCompendiums } from "./craft-catalogs.mjs";
 
-const VERSION = "0.6.0";
+const VERSION = "0.6.2";
 const html = value => String(value || "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 const base = (row, type) => ({ name: row.name, type, system: { sourceId: row.id, description: html(row.description || row.notes || ""), page: row.page || 0, metadata: row } });
 const conditions = [
