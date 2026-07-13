@@ -2,7 +2,7 @@
 
 > Private campaign repository. This package includes material derived from a lawfully owned rulebook and is not licensed for public redistribution.
 
-Version 0.5.0 expands the system from a character sheet into a GM-authoritative play surface:
+Version 0.5.1 completes the GM play-surface expansion with exported encounter audit logs and explicit per-action movement allowances. Version 0.5.0 introduced the broader rules expansion:
 
 - World policies now separate GM-only clocks, damage approval, build/advancement control, NPC secrets, and challenge outcomes from player-owned rolls, Hero Point spending, reactions, and inventory use.
 - Mortality, stabilization, wound recovery, nonlethal recovery, structured timed effects, passive/active resistance, and challenge trackers follow the Core Rulebook clocks.

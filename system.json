@@ -2,7 +2,7 @@
   "id": "alternity2e",
   "title": "Alternity 2e (Private System)",
   "description": "A private-use Foundry VTT implementation of Alternity 2e with character creation, rolls, wounds, armor, talents, gear, and impulse combat support.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "compatibility": { "minimum": 13, "verified": 14 },
   "authors": [{ "name": "Private campaign system" }],
   "esmodules": ["alternity2e.mjs"],
@@ -19,5 +19,5 @@
   "socket": true,
   "url": "https://github.com/camarillamike/alternity2e-foundry",
   "manifest": "https://raw.githubusercontent.com/camarillamike/alternity2e-foundry/main/system.json",
-  "download": "https://github.com/camarillamike/alternity2e-foundry/releases/download/v0.5.0/alternity2e-foundry-v0.5.0.zip"
+  "download": "https://github.com/camarillamike/alternity2e-foundry/releases/download/v0.5.1/alternity2e-foundry-v0.5.1.zip"
 }

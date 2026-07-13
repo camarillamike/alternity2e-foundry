@@ -6,7 +6,7 @@ import { talents } from "../data/talents.js";
 import { gear, upgrades } from "../data/gear.js";
 import { weaponAmmoProfile } from "./ammunition.mjs";
 
-const VERSION = "0.5.0";
+const VERSION = "0.5.1";
 const html = value => String(value || "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 const base = (row, type) => ({ name: row.name, type, system: { sourceId: row.id, description: html(row.description || row.notes || ""), page: row.page || 0, metadata: row } });
 const conditions = [
