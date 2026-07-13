@@ -2,7 +2,18 @@
 
 > Private campaign repository. This package includes material derived from a lawfully owned rulebook and is not licensed for public redistribution.
 
-Version 0.4.0 adds complete tactical ammunition handling:
+Version 0.5.0 expands the system from a character sheet into a GM-authoritative play surface:
+
+- World policies now separate GM-only clocks, damage approval, build/advancement control, NPC secrets, and challenge outcomes from player-owned rolls, Hero Point spending, reactions, and inventory use.
+- Mortality, stabilization, wound recovery, nonlethal recovery, structured timed effects, passive/active resistance, and challenge trackers follow the Core Rulebook clocks.
+- Tactical attacks now apply range, token cover, defensive devices, size, tech superiority, Tough, Poor Coverage, Hardened, Ablative, powered armor, Accurate, Brutal, Spread, burst, full auto, blast scatter, blast Dodge reactions, AP, and special ammunition.
+- Force Shields use their four severity bands and bleed-through; Displacer Units automatically spoil the first attack of a scene and penalize later attacks; only one Screen can operate at once.
+- Hero Points now improve eligible checks, provide immediate actions, reduce wound severity, and log GM awards and lucky-break requests.
+- Hero creation and advancement enforce locked builds, point pools, talent prerequisites, mandated-talent replacement, retraining allowances, and gear-upgrade eligibility.
+- Hero, NPC, creature, drone, and vehicle sheets now expose role-appropriate controls while keeping GM notes and world state private.
+- Standalone interchange schema 6 preserves actor role data, play trackers, ammunition, equipped/quantity state, custom Items, and installed upgrades.
+
+Version 0.4.0 added complete tactical ammunition handling:
 
 - Loaded ammunition is always tracked; ordinary reserves can be abstract or limited through a world setting.
 - Unlisted modern magazines and power cells default to 10 attacks, while explicit capacities and description-sourced exceptions are retained.

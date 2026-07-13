@@ -8,11 +8,22 @@ const wounds = () => new f.SchemaField(Object.fromEntries(["graze", "light", "mo
 export class AlternityActorData extends foundry.abstract.TypeDataModel {
   static defineSchema() {
     return {
-      schemaVersion: int(1, 1), level: int(1, 1), heroPoints: int(1, 0), abilities: abilities(), wounds: wounds(),
+      schemaVersion: int(6, 1), level: int(1, 1), heroPoints: int(1, 0), abilities: abilities(), wounds: wounds(),
       speciesId: text("human"), archetypeId: text(), mandatedTalentId: text(),
       campaign: new f.SchemaField({ techEra: int(7, 1), pointBuy: int(12, 0), restriction: text("R") }),
       identity: new f.SchemaField({ player: text(), concept: text(), background: new f.HTMLField(), goals: new f.HTMLField(), connections: new f.HTMLField(), notes: new f.HTMLField() }),
-      play: new f.SchemaField({ round: int(1, 1), impulse: int(1, 1), statuses: new f.ArrayField(text()), damageLog: new f.ArrayField(new f.ObjectField()), lastDamage: new f.ObjectField({ nullable: true, initial: null }) }),
+      build: new f.SchemaField({ locked: new f.BooleanField({ initial: true }), advancementOpen: new f.BooleanField({ initial: false }), skillPointsAvailable: int(0, 0), talentChoicesAvailable: int(0, 0), retrainingAvailable: int(0, 0), talentRetrainingAvailable: new f.BooleanField({ initial: false }) }),
+      play: new f.SchemaField({
+        scene: int(1, 1), round: int(1, 1), impulse: int(1, 1), statuses: new f.ArrayField(text()), effects: new f.ArrayField(new f.ObjectField()),
+        damageLog: new f.ArrayField(new f.ObjectField()), lastDamage: new f.ObjectField({ nullable: true, initial: null }), lastCheck: new f.ObjectField({ nullable: true, initial: null }),
+        heroPointLog: new f.ArrayField(new f.ObjectField()), challenges: new f.ArrayField(new f.ObjectField()),
+        mortality: new f.SchemaField({ active: new f.BooleanField({ initial: false }), dead: new f.BooleanField({ initial: false }), lethality: text("standard"), successes: int(0, 0), failures: int(0, 0), strikes: int(0, 0), interval: text(), nextTick: int(0, 0), stabilized: new f.BooleanField({ initial: false }) }),
+        recovery: new f.ArrayField(new f.ObjectField())
+      }),
+      npc: new f.SchemaField({ role: text("extra"), attitude: text("indifferent"), initiativeGroup: text(), motive: new f.HTMLField(), tactics: new f.HTMLField(), privateNotes: new f.HTMLField(), keySkill: text(), keyTarget: int(14, 0), secondaryTarget: int(16, 0) }),
+      creature: new f.SchemaField({ level: text("ordinary"), habitat: text(), senses: text(), movement: text(), behavior: new f.HTMLField(), specialAbilities: new f.HTMLField(), loot: new f.HTMLField() }),
+      drone: new f.SchemaField({ controllerId: text(), command: text(), range: text(), durationRemaining: text(), autonomous: new f.BooleanField({ initial: false }), components: new f.ArrayField(new f.ObjectField()) }),
+      vehicle: new f.SchemaField({ operatorId: text(), positionMode: text("absolute"), relativeRange: text("near"), controlState: text("controlled"), ramDamage: text(), cover: text(), environment: text() }),
       advancement: new f.ArrayField(new f.ObjectField()),
       migrationHistory: new f.ArrayField(new f.ObjectField())
     };

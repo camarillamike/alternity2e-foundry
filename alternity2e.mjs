@@ -8,6 +8,7 @@ import { registerRuntimeHooks } from "./module/hooks.mjs";
 import { AlternityCombat, registerCombatHooks } from "./module/combat.mjs";
 import { AlternityCreationWizard } from "./module/wizard.mjs";
 import { migrateActorAmmunition } from "./module/ammunition.mjs";
+import { migrateWorldV5 } from "./module/migrations.mjs";
 
 Hooks.once("init", () => {
   console.log("Alternity 2e | Initializing private game system");
@@ -16,7 +17,7 @@ Hooks.once("init", () => {
   CONFIG.Combat.documentClass = AlternityCombat;
   for (const type of ["hero", "npc", "creature", "drone", "vehicle"]) CONFIG.Actor.dataModels[type] = AlternityActorData;
   for (const type of ["skill", "talent", "weapon", "armor", "tool", "gear", "upgrade", "species", "archetype", "condition"]) CONFIG.Item.dataModels[type] = AlternityItemData;
-  CONFIG.Actor.trackableAttributes = { hero: { bar: [], value: ["heroPoints", "play.impulse"] } };
+  CONFIG.Actor.trackableAttributes = Object.fromEntries(["hero", "npc", "creature", "drone", "vehicle"].map(type => [type, { bar: [], value: ["heroPoints", "play.impulse", "wounds.mortal"] }]));
   const Sheets = foundry.applications.apps.DocumentSheetConfig;
   Sheets.registerSheet(foundry.documents.Actor, game.system.id, AlternityActorSheet, { types: ["hero", "npc", "creature", "drone", "vehicle"], makeDefault: true });
   Sheets.registerSheet(foundry.documents.Item, game.system.id, AlternityItemSheet, { makeDefault: true });
@@ -31,5 +32,6 @@ Hooks.once("init", () => {
 
 Hooks.once("ready", async () => {
   if (game.user.isGM && game.settings.get("alternity2e", "installPrivateCatalogs")) await installPrivateCatalogs();
+  if (game.user.isGM) { const migrated = await migrateWorldV5(); if (migrated) ui.notifications.info(`Migrated ${migrated} Alternity Actors to the v0.5 authority and tracker schema.`); }
   if (game.user.isGM) { const migrated = (await Promise.all(game.actors.map(actor => migrateActorAmmunition(actor)))).reduce((sum, count) => sum + count, 0); if (migrated) ui.notifications.info(`Updated ammunition profiles for ${migrated} existing weapon Items.`); }
 });

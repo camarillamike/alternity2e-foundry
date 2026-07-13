@@ -1,0 +1,28 @@
+.alternity2e .wound-row {
+  grid-template-columns: 52px minmax(220px, 1fr) auto auto;
+}
+
+.alternity2e .wound-boxes {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: center;
+}
+
+.alternity2e .wound-box {
+  flex: 0 0 18px;
+}
+
+.alternity2e .medicine-successes,
+.alternity2e .challenge-row,
+.alternity2e .effect-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+@media (max-width: 700px) {
+  .alternity2e .wound-row { grid-template-columns: 44px 1fr; }
+  .alternity2e .wound-boxes { grid-column: 1 / -1; }
+}
